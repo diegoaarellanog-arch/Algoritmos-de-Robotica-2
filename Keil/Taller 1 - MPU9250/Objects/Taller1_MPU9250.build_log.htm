@@ -21,26 +21,26 @@ Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.3.1.0
 Dialog DLL:      TCM.DLL V1.56.6.0
  
 <h2>Project:</h2>
-C:\Users\Lenovo\Documents\Universidad\Algoritmos de Robotica 2\Keil\Taller 1 - MPU9250\Taller1_MPU9250.uvprojx
+C:\Users\Lenovo\Documents\Universidad\Algoritmos de Robotica 2\Algoritmos de Robotica 2\Keil\Taller 1 - MPU9250\Taller1_MPU9250.uvprojx
 Project File Date:  08/13/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V6.24', folder: 'C:\Users\Lenovo\AppData\Local\Keil_v5\ARM\ARMCLANG\Bin'
 Rebuild target 'Target_1'
-compiling setup.cpp...
 compiling system_stm32f7xx.c...
 assembling startup_stm32f767xx.s...
-Taller1_MPU9250.cpp(188): warning: format specifies type 'char *' but the argument has type 'uint8_t' (aka 'unsigned char') [-Wformat]
-  188 |     sprintf(text3,"%s %#x \n\r",data[0]);
+compiling setup.cpp...
+Taller1_MPU9250.cpp(199): warning: format specifies type 'char *' but the argument has type 'uint8_t' (aka 'unsigned char') [-Wformat]
+  199 |     sprintf(text3,"%s %#x \n\r",data[0]);
       |                    ~~           ^~~~~~~
       |                    %hhu
-Taller1_MPU9250.cpp(188): warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
-  188 |     sprintf(text3,"%s %#x \n\r",data[0]);
+Taller1_MPU9250.cpp(199): warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
+  199 |     sprintf(text3,"%s %#x \n\r",data[0]);
       |                       ~~^
 2 warnings generated.
 compiling Taller1_MPU9250.cpp...
 linking...
-Program Size: Code=9588 RO-data=1152 RW-data=244 ZI-data=1784  
+Program Size: Code=9740 RO-data=1292 RW-data=244 ZI-data=1784  
 FromELF: creating hex file...
 ".\Objects\Taller1_MPU9250.axf" - 0 Error(s), 2 Warning(s).
 
@@ -68,12 +68,12 @@ Package Vendor: Keil
    * Component: ARM::CMSIS:CORE@6.2.0
 
    * Component: Keil::Device:Startup@1.2.5
+      Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OTP.s
       Include file:  Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h
       Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OPT.s
-      Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OTP.s
       Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s
       Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>
