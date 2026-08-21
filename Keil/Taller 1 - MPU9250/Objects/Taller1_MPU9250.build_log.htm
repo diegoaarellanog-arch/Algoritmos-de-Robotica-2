@@ -5,7 +5,7 @@
 <h2>Tool Versions:</h2>
 IDE-Version: µVision V5.43.1.0
 Copyright (C) 2025 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: Diego Arellano, ECCI, LIC=----
+License Information: Diego Arellano, Universidad ECCI, LIC=----
  
 Tool Versions:
 Toolchain:       MDK-Lite  Version: 5.43.0.0
@@ -22,25 +22,25 @@ Dialog DLL:      TCM.DLL V1.56.6.0
  
 <h2>Project:</h2>
 C:\Users\Lenovo\Documents\Universidad\Algoritmos de Robotica 2\Algoritmos de Robotica 2\Keil\Taller 1 - MPU9250\Taller1_MPU9250.uvprojx
-Project File Date:  08/13/2026
+Project File Date:  08/20/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V6.24', folder: 'C:\Users\Lenovo\AppData\Local\Keil_v5\ARM\ARMCLANG\Bin'
 Rebuild target 'Target_1'
 compiling system_stm32f7xx.c...
-assembling startup_stm32f767xx.s...
 compiling setup.cpp...
-Taller1_MPU9250.cpp(199): warning: format specifies type 'char *' but the argument has type 'uint8_t' (aka 'unsigned char') [-Wformat]
-  199 |     sprintf(text3,"%s %#x \n\r",data[0]);
+assembling startup_stm32f767xx.s...
+Taller1_MPU9250.cpp(186): warning: format specifies type 'char *' but the argument has type 'uint8_t' (aka 'unsigned char') [-Wformat]
+  186 |     sprintf(text3,"%s %#x \n\r",data[0]);
       |                    ~~           ^~~~~~~
       |                    %hhu
-Taller1_MPU9250.cpp(199): warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
-  199 |     sprintf(text3,"%s %#x \n\r",data[0]);
+Taller1_MPU9250.cpp(186): warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
+  186 |     sprintf(text3,"%s %#x \n\r",data[0]);
       |                       ~~^
 2 warnings generated.
 compiling Taller1_MPU9250.cpp...
 linking...
-Program Size: Code=9740 RO-data=1292 RW-data=244 ZI-data=1784  
+Program Size: Code=9308 RO-data=1148 RW-data=236 ZI-data=1728  
 FromELF: creating hex file...
 ".\Objects\Taller1_MPU9250.axf" - 0 Error(s), 2 Warning(s).
 
@@ -68,9 +68,9 @@ Package Vendor: Keil
    * Component: ARM::CMSIS:CORE@6.2.0
 
    * Component: Keil::Device:Startup@1.2.5
-      Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OTP.s
-      Include file:  Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h
       Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OPT.s
+      Include file:  Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h
+      Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OTP.s
       Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s
       Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c
 Build Time Elapsed:  00:00:02

@@ -30,8 +30,8 @@
 #define TEMP_OFFSET           21                      // Valor de offset do Termometro (Datasheet: MPU-6050 Product Specification, pag. 12)
 
 // Offsets de calibração (AQUI DEVEM IR OS VALORES DETERMINADOS EN LA CALIBRACAO PREVIA COM O CÓDIGO "calibracao.ino")
-//double offset_accelx = 334.0, offset_accely = -948.0, offset_accelz = 16252.0;
-//double offset_gyrox = 111.0, offset_gyroy = 25.0, offset_gyroz = -49.0;
+double offset_accelx = 334.0, offset_accely = -948.0, offset_accelz = 16252.0;
+double offset_gyrox = 111.0, offset_gyroy = 25.0, offset_gyroz = -49.0;
 
 // Valores "RAW" de tipo inteiro
 int16_t raw_accelx, raw_accely, raw_accelz;
@@ -49,25 +49,21 @@ uint8_t GirAcel[14];
 uint8_t flag = 0, j, cont = 0;
 int i;
 unsigned char d;
-char text[100], text1[60]={"TESTE DE CONEXAO PARA O GIROSCOPIO E O ACELEROMETRO \n\r"}; 
+char text[50], text1[60]={"TESTE DE CONEXAO PARA O GIROSCOPIO E O ACELEROMETRO \n\r"}; 
 char text2[35]={"Erro de conexao com a MPU6050 \n\r"};
 char text3[55]={"Opaaa. Eu nao sou a MPU6050, Quem sou eu? :S. I am:"};
 char text4[40]={"Conexao bem sucedida com a MPU6050 \n\r"};
 char text5[45]={"Oi, tudo joia?... Eu sou a MPU6050 XD \n\r"};
 unsigned char cmd[1];
 
-float timer = 0.0, t_fin = 1.0, cont_timer = 0.0;
+float timer = 0.0;
 char text6[40];
-char text7[5]={"A\n"};
 
 //I2C
 void ReadI2C1(uint8_t Address, uint8_t Register, uint8_t *Data, uint8_t bytes);
 void WriteI2C1(uint8_t Address, uint8_t Register, uint8_t *Data, uint8_t bytes);
-void UART3_WriteChar(char c);
-void UART3_Print(const char *str);
 
 void Print(char *data, int n);
-void delay(void);
 
 void SysTick_Wait(uint32_t n){
     SysTick->LOAD = n - 1; //15999
@@ -166,35 +162,26 @@ int main(){
     TIM3->PSC = 24; // Prescale factor 25 for 100ms of time
     TIM3->ARR = 63999; // Maximum count value
 		
-	RCC->APB1ENR |= (1<<3); //Enable the TIMER5 clock 
+		RCC->APB1ENR |= (1<<3); //Enable the TIMER5 clock 
     TIM5->PSC = 24; // Prescale factor 25 for 100ms of time
-    TIM5->ARR = 10000000; // Maximum count value
+    TIM5->ARR = 63999; // Maximum count value
     
 
     USART3->CR1 |= (1<<0);
     
     SysTick_ms(1000);
-		
-		UART3_Print("\r\n=========================================\r\n");
-    UART3_Print("  Prueba UART desde Keil uVision\r\n");
-    UART3_Print("=========================================\r\n");
-
-
 
     //----------------------------------------------------------------------------
     //                        				MPU6050
     //----------------------------------------------------------------------------
     cmd[0] = 0x00;	
     WriteI2C1(MPU6500_address, 0x6B, cmd, 1); // Desativa modo de hibernação do MPU6050
-    UART3_Print("  Prjohueba UART desde Keil uVision\r\n");
-		Print(text1, strlen(text1));
-	  
-
+    Print(text1, strlen(text1));
     //.....................................................................
     //        Quem sou eu para a MPU6050 (giroscópio e acelerômetro)
     //.....................................................................
     ReadI2C1(MPU6500_address, 0x75, data, 14);
-    if (data[0] != 0x68) { // DEFAULT_REGISTER_WHO_AM_I_MPU6050 0x68
+    if (data[0] != 0x71) { // DEFAULT_REGISTER_WHO_AM_I_MPU6050 0x68
     Print(text2, strlen(text2));
     sprintf(text3,"%s %#x \n\r",data[0]);
     Print(text3, strlen(text3));
@@ -215,10 +202,9 @@ int main(){
     while(1){
         if(flag == 1){
             flag = 0;
-            i = 1;
-            while(1){
-								TIM5->CNT = 0;
-								TIM5->CR1 |= (1<<0); // Enable Counting										
+            for(i=0; i<=299; i++){
+                TIM3->CNT = 0;
+                TIM3->CR1 |= (1<<0); // Enable Counting										
                 ReadI2C1(MPU6500_address, 0x3B, GirAcel, 14);
                 raw_accelx = GirAcel[0]<<8 | GirAcel[1];    
                 raw_accely = GirAcel[2]<<8 | GirAcel[3];
@@ -228,7 +214,11 @@ int main(){
                 raw_gyroy = GirAcel[10]<<8 | GirAcel[11];
                 raw_gyroz = GirAcel[12]<<8 | GirAcel[13];
                 //SysTick_ms(1);	
-                delay();
+                //TIM5->CNT = 0;
+                //TIM5->CR1 |= (1<<0); // Enable Counting
+                //while(TIM5->CNT < 33000); //2ms
+                //while(TIM5->CNT < 136160); //8150us
+                //TIM5->CR1 &= ~(1<<0); // Disable Counting	
                 //Dados escalados
                 //accelx = raw_accelx*SENSITIVITY_ACCEL;
                 //accely = raw_accely*SENSITIVITY_ACCEL;
@@ -237,20 +227,14 @@ int main(){
                 //gyroy = raw_gyroy*SENSITIVITY_GYRO;
                 //gyroz = raw_gyroz*SENSITIVITY_GYRO;
                 //temp = (raw_temp/SENSITIVITY_TEMP)+21;
-                TIM5->CR1 &= ~(1<<0); // Disable Counting			
-                timer = TIM5->CNT*0.0000000625;
-                cont_timer += timer;
+                TIM3->CR1 &= ~(1<<0); // Disable Counting			
+                timer = TIM3->CNT*0.0000000625;
+                //timer = TIM3->CNT;
                 //sprintf(text6,"El tiempo es %f segundos \n", timer);
-//Print(text6, strlen(text6));
-                sprintf(text,"%d \t %.4f \t %.4f \t %d \t %d \t %d \t %d \t %d \t %d \t %d \n",i++, timer, cont_timer, raw_accelx, raw_accely, raw_accelz, raw_gyrox, raw_gyroy, raw_gyroz, raw_temp);
+                sprintf(text,"%d \t %.4f \t %d \t %d \t %d \t %d \t %d \t %d \t %d \n",i+1,timer, raw_accelx, raw_accely, raw_accelz, raw_gyrox, raw_gyroy, raw_gyroz, raw_temp);
                 //sprintf(text,"%d \t %.2f \t %.2f \t %.2f \t %.2f \t %.2f \t %.2f \t %.2f \n\r",i+1,accelx, accely, accelz, gyrox, gyroy, gyroz, temp);
-                Print(text, strlen(text));
-                if(cont_timer >= t_fin){
-                    cont_timer = 0;
-                    Print(text7, strlen(text7));
-                    break;
-                }
-								
+                //Print(text6, strlen(text6));
+                Print(text, strlen(text));		
             }
         }
     }
@@ -269,13 +253,12 @@ void WriteI2C1(uint8_t Address, uint8_t Register, uint8_t *Data, uint8_t bytes){
     I2C1->CR2 |= (1<<25);// Set automatic end mode
 
     I2C1->CR2 |= (1<<13);// Generate START
-		UART3_Print("  Prjohueba UARTn\r\n");
+
     while (((I2C1->ISR) & (1<<1)) != (0b10)){}// Wait the (TXIS) Transmit interrupt status
 
     I2C1->TXDR = Register;// Transmit the register
 
     n = bytes;
-			
     while(n>0){
         while (((I2C1->ISR) & (1<<1)) != (0b10)){}// Wait the (TXIS) Transmit interrupt status
         I2C1->TXDR = *Data;// Data to be sent
@@ -338,32 +321,4 @@ void Print(char *data, int n){
     //while((USART3->ISR & 0x80)==0){};
     USART3->TDR = 0x0D; 
     while(((USART3->ISR & 0x80) >> 7) == 0){}
-}
-
-void delay(void){
-	TIM3->CNT = 0;
-	TIM3->CR1 |= (1<<0); // Enable Counting
-	//while(TIM5->CNT < 16000); //1ms	
-	while(TIM3->CNT < 8000); //0.5ms
-	//while(TIM5->CNT < 128000); //8.51ms=8150us
-	TIM3->CR1 &= ~(1<<0); // Disable Counting	
-	
-	for(j=0; j<=7; j++){
-		TIM3->CNT = 0;
-		TIM3->CR1 |= (1<<0); // Enable Counting
-		while(TIM3->CNT < 16000); //1ms	
-		TIM3->CR1 &= ~(1<<0); // Disable Counting	
-	}
-}
-
-void UART3_WriteChar(char c) {
-    // Esperar hasta que el registro de transmisi?n est? vac?o (TXE, Bit 7)
-    while (!(USART3->ISR & (1 << 7)));
-    USART3->TDR = c;
-}
-
-void UART3_Print(const char *str) {
-    while (*str) {
-        UART3_WriteChar(*str++);
-    }
 }

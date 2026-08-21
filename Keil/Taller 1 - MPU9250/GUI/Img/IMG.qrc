@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="newPrefix">
+    <file>UNIVERSIDAD_ECCI.png</file>
+  </qresource>
+</RCC>
