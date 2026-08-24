@@ -9,14 +9,42 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QComboBox
+import serial
+import serial.tools.list_ports  # <-- Agrega esta línea
+import numpy 
+import matplotlib.pyplot as plt
+import numpy.matlib as npm
+from copy import copy, deepcopy
+import time
+import sys
 
 
+class OutputRedirector:
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+        self.stdout_orig = sys.stdout  # Guardar la consola original
+
+    def write(self, text):
+        # 1. Mantener la salida en la consola de VS Code/Terminal
+        self.stdout_orig.write(text)
+        
+        # 2. Escribir en el QPlainTextEdit de la GUI si el texto no está vacío
+        if text.strip():
+            # Insertar texto al final del log
+            self.text_widget.moveCursor(self.text_widget.textCursor().MoveOperation.End)
+            self.text_widget.insertPlainText(text + "\n")
+            self.text_widget.moveCursor(self.text_widget.textCursor().MoveOperation.End)
+
+    def flush(self):
+        # Requerido para compatibilidad con sys.stdout
+        self.stdout_orig.flush()
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(1072, 701)
         self.label = QtWidgets.QLabel(Form)
-        self.label.setGeometry(QtCore.QRect(720, 550, 221, 121))
+        self.label.setGeometry(QtCore.QRect(720, 560, 221, 121))
         self.label.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft)
         self.label.setObjectName("label")
         self.groupBox = QtWidgets.QGroupBox(Form)
@@ -75,17 +103,18 @@ class Ui_Form(object):
         self.GiroscopioNoCalibrado_4.setGeometry(QtCore.QRect(20, 30, 291, 191))
         self.GiroscopioNoCalibrado_4.setObjectName("GiroscopioNoCalibrado_4")
         self.groupBox_4 = QtWidgets.QGroupBox(Form)
-        self.groupBox_4.setGeometry(QtCore.QRect(720, 50, 331, 91))
+        self.groupBox_4.setGeometry(QtCore.QRect(720, 50, 331, 101))
         self.groupBox_4.setObjectName("groupBox_4")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.groupBox_4)
-        self.verticalLayoutWidget.setGeometry(QtCore.QRect(20, 20, 291, 51))
+        self.verticalLayoutWidget.setGeometry(QtCore.QRect(20, 30, 291, 53))
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.fontComboBox = QtWidgets.QFontComboBox(self.verticalLayoutWidget)
-        self.fontComboBox.setObjectName("fontComboBox")
-        self.verticalLayout.addWidget(self.fontComboBox)
+        self.comboBox = QtWidgets.QComboBox(self.verticalLayoutWidget)
+        self.comboBox.setCurrentText("")
+        self.comboBox.setObjectName("comboBox")
+        self.verticalLayout.addWidget(self.comboBox)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.pushButton_3 = QtWidgets.QPushButton(self.verticalLayoutWidget)
@@ -96,7 +125,7 @@ class Ui_Form(object):
         self.horizontalLayout.addWidget(self.pushButton_2)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.groupBox_5 = QtWidgets.QGroupBox(Form)
-        self.groupBox_5.setGeometry(QtCore.QRect(720, 150, 331, 191))
+        self.groupBox_5.setGeometry(QtCore.QRect(720, 160, 331, 191))
         self.groupBox_5.setObjectName("groupBox_5")
         self.plainTextEdit = QtWidgets.QPlainTextEdit(self.groupBox_5)
         self.plainTextEdit.setGeometry(QtCore.QRect(20, 60, 291, 111))
@@ -113,13 +142,103 @@ class Ui_Form(object):
         self.groupBox_5.raise_()
         self.label_2.raise_()
 
+
+
+        self.puerto_serial = None
+        self.groupBox.setEnabled(False)
+        self.groupBox_2.setEnabled(False)
+        self.groupBox_3.setEnabled(False)
+        self.groupBox_5.setEnabled(False)
+        self.plainTextEdit.setReadOnly(True)
+        sys.stdout = OutputRedirector(self.plainTextEdit)
+        self.comboBox.showPopup = self.on_combobox_click
+        self.pushButton.setEnabled(False)
+        self.pushButton_2.setEnabled(False)
+        self.pushButton_2.clicked.connect(self.ConectarPuerto)
+        self.pushButton_3.setEnabled(False)
+        self.pushButton_3.clicked.connect(self.DesconectarPuerto)
+
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
+    def ListarPuertos(self):    
+        # Acceso directo porque estás dentro de Ui_Form
+        combo = self.comboBox 
+        combo.clear()
+        
+        puertos = serial.tools.list_ports.comports()
+        
+        if puertos:
+            for puerto in puertos:
+                combo.addItem(f"{puerto.device} - {puerto.description}", userData=puerto.device)
+                self.pushButton_2.setEnabled(True)
+        else:
+            combo.addItem("No hay puertos disponibles")
+            self.pushButton_2.setEnabled(False)
+
+    def ConectarPuerto(self):
+        self.groupBox_5.setEnabled(True)
+
+        if not self.puerto_serial or not self.puerto_serial.is_open:
+            # Obtener el nombre limpio del puerto (ej: 'COM3')
+            puerto_nom = self.ObtenerPuertoSeleccionado()
+            
+            # Validar selección
+            if not puerto_nom or puerto_nom == "No hay puertos disponibles":
+                print("Selecciona un puerto válido antes de conectar.")
+                return
+
+            try:
+                # Configurar y abrir puerto I2C/UART (Ajusta los baudios según tu micro, ej: 115200)
+                self.puerto_serial = serial.Serial(
+                    port=puerto_nom,
+                    baudrate=115200,
+                    timeout=0.1
+                )
+                
+                # Actualizar interfaz
+                self.pushButton.setEnabled(True)
+                self.pushButton_2.setEnabled(False)
+                self.pushButton_3.setEnabled(True)
+                self.comboBox.setEnabled(False) # Bloquea el selector mientras está conectado
+                
+                print(f"--- Conectado exitosamente a {puerto_nom} ---")
+
+            except serial.SerialException as e:
+                print(f"Error al abrir el puerto {puerto_nom}: {e}")
+
+    def DesconectarPuerto(self):
+        if self.puerto_serial and self.puerto_serial.is_open:
+            try:
+                self.puerto_serial.close()
+                self.puerto_serial = None
+                
+                # Actualizar interfaz
+                self.comboBox.setEnabled(True)
+                self.pushButton.setEnabled(False)
+                self.pushButton_2.setEnabled(True)
+                self.pushButton_3.setEnabled(False)
+                print("--- Puerto Desconectado ---")
+            except Exception as e:
+                print(f"Error al cerrar el puerto: {e}")
+
+    def ObtenerPuertoSeleccionado(self):
+        """Retorna solo el nombre del puerto (ej: 'COM3') para la conexión serial."""
+        return self.comboBox.currentData()
+
+    def on_combobox_click(self):
+        self.ListarPuertos()
+        # Llama a showPopup del widget directamente pasando self.comboBox
+        QComboBox.showPopup(self.comboBox)
+        
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
-        self.label.setText(_translate("Form", "<html><head/><body><p>Integrantes: </p><p>Diego Alejandro Arellano Gutierrez - 110847<br/>Johan Montejo - 124077<br/>Sergio Iván Jaimes Garzón - 133238</p></body></html>"))
+        self.label.setText(_translate("Form", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Integrantes: <br />Diego Alejandro Arellano Gutierrez - 110847<br />Edwar Felipe García Patiño - 142911<br />Javier Bohorquez Gaitán - 98587<br />Johan Montejo - 124077<br />Sergio Iván Jaimes Garzón - 133238</p></body></html>"))
         self.groupBox.setTitle(_translate("Form", "Datos No Calibrados "))
         self.label_4.setText(_translate("Form", "Giroscopio"))
         self.label_5.setText(_translate("Form", "Acelerometro"))
@@ -132,7 +251,6 @@ class Ui_Form(object):
         self.label_9.setText(_translate("Form", "Magnetometro"))
         self.groupBox_3.setTitle(_translate("Form", "Ángulos de Euler"))
         self.groupBox_4.setTitle(_translate("Form", "Comunicación Serial"))
-        self.fontComboBox.setCurrentText(_translate("Form", "Puertos Seriales Disponibles"))
         self.pushButton_3.setText(_translate("Form", "Desconectar"))
         self.pushButton_2.setText(_translate("Form", "Conectar"))
         self.groupBox_5.setTitle(_translate("Form", "Monitor Serial"))
