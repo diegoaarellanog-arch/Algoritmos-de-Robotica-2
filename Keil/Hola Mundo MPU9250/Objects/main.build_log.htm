@@ -27,20 +27,21 @@ Project File Date:  08/19/2026
 <h2>Output:</h2>
 *** Using Compiler 'V6.24', folder: 'C:\Users\Lenovo\AppData\Local\Keil_v5\ARM\ARMCLANG\Bin'
 Rebuild target 'Target_1'
-assembling startup_stm32f767xx.s...
 compiling system_stm32f7xx.c...
-main.cpp(12): warning: unused parameter 'file' [-Wunused-parameter]
-   12 | int _write(int file, char *ptr, int len) {
-      |                ^
-main.cpp(115): warning: illegal character encoding in string literal [-Winvalid-source-encoding]
-  115 |         printf(" -> <A1>Conexion Exitosa con el MPU!\r\n");
-      |                     ^~~~
-main.cpp(134): error: extraneous closing brace ('}')
-  134 | }}
-      |  ^
-2 warnings and 1 error generated.
+assembling startup_stm32f767xx.s...
+main.cpp(188): warning: format specifies type 'char *' but the argument has type 'uint8_t' (aka 'unsigned char') [-Wformat]
+  188 |     sprintf(text3,"%s %#x \n\r",data[0]);
+      |                    ~~           ^~~~~~~
+      |                    %hhu
+main.cpp(188): warning: more '%' conversions than data arguments [-Wformat-insufficient-args]
+  188 |     sprintf(text3,"%s %#x \n\r",data[0]);
+      |                       ~~^
+2 warnings generated.
 compiling main.cpp...
-".\Objects\main.axf" - 1 Error(s), 2 Warning(s).
+linking...
+Program Size: Code=9588 RO-data=1152 RW-data=244 ZI-data=1784  
+FromELF: creating hex file...
+".\Objects\main.axf" - 0 Error(s), 2 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -66,13 +67,12 @@ Package Vendor: Keil
    * Component: ARM::CMSIS:CORE@6.2.0
 
    * Component: Keil::Device:Startup@1.2.5
-      Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c
-      Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s
       Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OPT.s
-      Include file:  Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h
       Source file:   MDK/Device/Source/ARM/STM32F76x_77x_OTP.s
-Target not created.
-Build Time Elapsed:  00:00:00
+      Include file:  Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h
+      Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s
+      Source file:   Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

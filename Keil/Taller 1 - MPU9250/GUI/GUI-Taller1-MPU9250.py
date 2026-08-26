@@ -9,6 +9,7 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import QComboBox
 import serial
 import serial.tools.list_ports  # <-- Agrega esta línea
@@ -18,6 +19,11 @@ import numpy.matlib as npm
 from copy import copy, deepcopy
 import time
 import sys
+import pyqtgraph as pg
+
+# Configurar fondo blanco y texto/ejes negros para TODAS las gráficas
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
 
 
 class OutputRedirector:
@@ -153,6 +159,7 @@ class Ui_Form(object):
         sys.stdout = OutputRedirector(self.plainTextEdit)
         self.comboBox.showPopup = self.on_combobox_click
         self.pushButton.setEnabled(False)
+        self.pushButton.clicked.connect(self.AdquirirDatos)
         self.pushButton_2.setEnabled(False)
         self.pushButton_2.clicked.connect(self.ConectarPuerto)
         self.pushButton_3.setEnabled(False)
@@ -180,32 +187,194 @@ class Ui_Form(object):
         self.groupBox_5.setEnabled(True)
 
         if not self.puerto_serial or not self.puerto_serial.is_open:
-            # Obtener el nombre limpio del puerto (ej: 'COM3')
             puerto_nom = self.ObtenerPuertoSeleccionado()
             
-            # Validar selección
             if not puerto_nom or puerto_nom == "No hay puertos disponibles":
                 print("Selecciona un puerto válido antes de conectar.")
                 return
 
             try:
-                # Configurar y abrir puerto I2C/UART (Ajusta los baudios según tu micro, ej: 115200)
                 self.puerto_serial = serial.Serial(
                     port=puerto_nom,
                     baudrate=115200,
-                    timeout=0.1
+                    timeout=0.5  # Timeout ligeramente mayor para evitar lecturas bloqueadas
                 )
+                time.sleep(1.5)  # Espera a que el bootloader del Arduino termine de reiniciar
+                # Vaciar la basura inicial del buffer de hardware
+                self.puerto_serial.reset_input_buffer()
                 
                 # Actualizar interfaz
                 self.pushButton.setEnabled(True)
                 self.pushButton_2.setEnabled(False)
                 self.pushButton_3.setEnabled(True)
-                self.comboBox.setEnabled(False) # Bloquea el selector mientras está conectado
+                self.comboBox.setEnabled(False)
                 
                 print(f"--- Conectado exitosamente a {puerto_nom} ---")
 
             except serial.SerialException as e:
                 print(f"Error al abrir el puerto {puerto_nom}: {e}")
+
+    def AdquirirDatos(self):
+            if not self.puerto_serial or not self.puerto_serial.is_open:
+                print("Puerto serial no disponible.")
+                return
+
+            raw = 300
+            # 9 columnas: [i, timer_sec, temp, acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z]
+            datos = numpy.zeros((raw, 9))
+            
+            self.puerto_serial.reset_input_buffer()
+            print("\nCapturando datos...\n")
+            self.puerto_serial.write(b'H')
+            
+            i = 0
+            self.puerto_serial.timeout = 0.2
+            tiempo_inicio = time.time()
+            tiempo_maximo = 8.0 
+
+            while i < raw:
+                QCoreApplication.processEvents()
+                
+                if not self.puerto_serial or not self.puerto_serial.is_open:
+                    print("El puerto se desconectó durante la adquisición.")
+                    break
+
+                if time.time() - tiempo_inicio > tiempo_maximo:
+                    print(f"\n[TIMEOUT]: Tiempo límite alcanzado. Se capturaron {i} de {raw} muestras.")
+                    break
+
+                try:
+                    bytes_recibidos = self.puerto_serial.readline()
+                    if not bytes_recibidos:
+                        continue
+
+                    rec = bytes_recibidos.decode("utf-8", errors="ignore").strip()
+                    if not rec:
+                        continue
+
+                    rec_limpio = rec.replace(',', '.')
+                    partes = rec_limpio.split()
+                    valores = [float(val) for val in partes]
+                    
+                    if len(valores) == 9:
+                        datos[i][:] = valores
+                        i += 1
+                        print(f"[{len(valores)}][LOG MICRO]: {rec}")
+                    else:
+                        print(f"[{len(valores)}][LOG MICRO]: {rec}")
+
+                except ValueError:
+                    print(f"[ERR CONVERSIÓN]: {rec}")
+                except Exception as e:
+                    print(f"Error durante la lectura: {e}")
+                    break
+
+            if i > 0:
+                print(f"\nLectura finalizada. Muestras procesadas: {i}\n")
+                
+                # -------------------------------------------------------------
+                # CONSTANTES DE SENSIBILIDAD (Convertidores a g y °/s)
+                # SENSITIVITY = 1.0 / LSB_POR_UNIDAD
+                # -------------------------------------------------------------
+                SENSITIVITY_ACCEL = 1.0 / 16384.0  # Para obtener valores en g (±2g)
+                SENSITIVITY_GYRO  = 1.0 / 131.0    # Para obtener valores en °/s (±250°/s)
+
+                # Eje horizontal: Tiempo real acumulado o muestras si timer_sec falla
+                eje_x = datos[:i, 1] if numpy.max(datos[:i, 1]) > 0 else numpy.arange(i)
+
+                # Extraer columnas RAW
+                acc_x_raw  = datos[:i, 3]
+                acc_y_raw  = datos[:i, 4]
+                acc_z_raw  = datos[:i, 5]
+                gyro_x_raw = datos[:i, 6]
+                gyro_y_raw = datos[:i, 7]
+                gyro_z_raw = datos[:i, 8]
+
+                # -------------------------------------------------------------
+                # 1. CÁLCULO DE OFFSETS (RAW LSB)
+                # -------------------------------------------------------------
+                off_ax = numpy.mean(acc_x_raw)
+                off_ay = numpy.mean(acc_y_raw)
+                off_az = numpy.mean(acc_z_raw)
+                off_gx = numpy.mean(gyro_x_raw)
+                off_gy = numpy.mean(gyro_y_raw)
+                off_gz = numpy.mean(gyro_z_raw)
+
+                offsets = [off_ax, off_ay, off_az, off_gx, off_gy, off_gz]
+
+                print("=" * 55)
+                print("          OFFSETS CALCULADOS EN REPOSO          ")
+                print("=" * 55)
+                print(f" Accel X : {off_ax:10.2f} LSB  ({off_ax * SENSITIVITY_ACCEL:6.3f} g)")
+                print(f" Accel Y : {off_ay:10.2f} LSB  ({off_ay * SENSITIVITY_ACCEL:6.3f} g)")
+                print(f" Accel Z : {off_az:10.2f} LSB  ({off_az * SENSITIVITY_ACCEL:6.3f} g)")
+                print("-" * 55)
+                print(f" Gyro  X : {off_gx:10.2f} LSB  ({off_gx * SENSITIVITY_GYRO:6.2f} °/s)")
+                print(f" Gyro  Y : {off_gy:10.2f} LSB  ({off_gy * SENSITIVITY_GYRO:6.2f} °/s)")
+                print(f" Gyro  Z : {off_gz:10.2f} LSB  ({off_gz * SENSITIVITY_GYRO:6.2f} °/s)")
+                print("=" * 55 + "\n")
+
+                # -------------------------------------------------------------
+                # 2. ESCALAMIENTO FÍSICO (NO CALIBRADOS Y CALIBRADOS)
+                # -------------------------------------------------------------
+                # Datos NO Calibrados en unidades físicas
+                acc_x_nocal = acc_x_raw * SENSITIVITY_ACCEL
+                acc_y_nocal = acc_y_raw * SENSITIVITY_ACCEL
+                acc_z_nocal = acc_z_raw * SENSITIVITY_ACCEL
+
+                gyro_x_nocal = gyro_x_raw * SENSITIVITY_GYRO
+                gyro_y_nocal = gyro_y_raw * SENSITIVITY_GYRO
+                gyro_z_nocal = gyro_z_raw * SENSITIVITY_GYRO
+
+                # Datos CALIBRADOS (Restando offset y multiplicando por sensibilidad)
+                acc_x_cal = (acc_x_raw - off_ax) * SENSITIVITY_ACCEL
+                acc_y_cal = (acc_y_raw - off_ay) * SENSITIVITY_ACCEL
+                acc_z_cal = (acc_z_raw - off_az) * SENSITIVITY_ACCEL
+
+                gyro_x_cal = (gyro_x_raw - off_gx) * SENSITIVITY_GYRO
+                gyro_y_cal = (gyro_y_raw - off_gy) * SENSITIVITY_GYRO
+                gyro_z_cal = (gyro_z_raw - off_gz) * SENSITIVITY_GYRO
+
+                # -------------------------------------------------------------
+                # 3. GRAFICACIÓN EN INTERFAZ (PyQtGraph)
+                # -------------------------------------------------------------
+                self.groupBox.setEnabled(True)
+                self.groupBox_2.setEnabled(True)
+
+                pen_r = pg.mkPen(color='r', width=1.5)
+                pen_g = pg.mkPen(color='g', width=1.5)
+                pen_b = pg.mkPen(color='b', width=1.5)
+
+                # A) Giroscopio NO Calibrado (°/s)
+                self.GiroscopioNoCalibrado.clear()
+                self.GiroscopioNoCalibrado.addLegend(labelTextSize='8pt')
+                self.GiroscopioNoCalibrado.plot(eje_x, gyro_x_nocal, pen=pen_r, name="gx")
+                self.GiroscopioNoCalibrado.plot(eje_x, gyro_y_nocal, pen=pen_g, name="gy")
+                self.GiroscopioNoCalibrado.plot(eje_x, gyro_z_nocal, pen=pen_b, name="gz")
+
+                # B) Acelerómetro NO Calibrado (g)
+                self.AcelerometroNoCalibrado.clear()
+                self.AcelerometroNoCalibrado.addLegend(labelTextSize='8pt')
+                self.AcelerometroNoCalibrado.plot(eje_x, acc_x_nocal, pen=pen_r, name="ax")
+                self.AcelerometroNoCalibrado.plot(eje_x, acc_y_nocal, pen=pen_g, name="ay")
+                self.AcelerometroNoCalibrado.plot(eje_x, acc_z_nocal, pen=pen_b, name="az")
+
+                # C) Giroscopio CALIBRADO (°/s)
+                self.GiroscopioNoCalibrado_2.clear()
+                self.GiroscopioNoCalibrado_2.addLegend(labelTextSize='8pt')
+                self.GiroscopioNoCalibrado_2.plot(eje_x, gyro_x_cal, pen=pen_r, name="gx cal")
+                self.GiroscopioNoCalibrado_2.plot(eje_x, gyro_y_cal, pen=pen_g, name="gy cal")
+                self.GiroscopioNoCalibrado_2.plot(eje_x, gyro_z_cal, pen=pen_b, name="gz cal")
+
+                # D) Acelerómetro CALIBRADO (g)
+                self.AcelerometroNoCalibrado_2.clear()
+                self.AcelerometroNoCalibrado_2.addLegend(labelTextSize='8pt')
+                self.AcelerometroNoCalibrado_2.plot(eje_x, acc_x_cal, pen=pen_r, name="ax cal")
+                self.AcelerometroNoCalibrado_2.plot(eje_x, acc_y_cal, pen=pen_g, name="ay cal")
+                self.AcelerometroNoCalibrado_2.plot(eje_x, acc_z_cal, pen=pen_b, name="az cal")
+
+            else:
+                print("No se recibieron datos válidos de la MPU6050/MPU9250.")
 
     def DesconectarPuerto(self):
         if self.puerto_serial and self.puerto_serial.is_open:
@@ -230,7 +399,7 @@ class Ui_Form(object):
         self.ListarPuertos()
         # Llama a showPopup del widget directamente pasando self.comboBox
         QComboBox.showPopup(self.comboBox)
-        
+
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
