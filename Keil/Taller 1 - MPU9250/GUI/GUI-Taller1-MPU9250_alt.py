@@ -1,0 +1,436 @@
+# -*- coding: utf-8 -*-
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtWidgets import QComboBox
+import serial
+import serial.tools.list_ports
+import numpy 
+import time
+import sys
+import pyqtgraph as pg
+
+# Configurar fondo blanco y texto/ejes negros para TODAS las gráficas
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+
+
+class OutputRedirector:
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+        self.stdout_orig = sys.stdout
+
+    def write(self, text):
+        self.stdout_orig.write(text)
+        if text.strip():
+            self.text_widget.moveCursor(self.text_widget.textCursor().MoveOperation.End)
+            self.text_widget.insertPlainText(text + "\n")
+            self.text_widget.moveCursor(self.text_widget.textCursor().MoveOperation.End)
+
+    def flush(self):
+        self.stdout_orig.flush()
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        Form.setObjectName("Form")
+        Form.resize(1072, 701)
+        self.label = QtWidgets.QLabel(Form)
+        self.label.setGeometry(QtCore.QRect(720, 560, 221, 121))
+        self.label.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft)
+        self.label.setObjectName("label")
+        self.groupBox = QtWidgets.QGroupBox(Form)
+        self.groupBox.setGeometry(QtCore.QRect(20, 50, 331, 631))
+        self.groupBox.setObjectName("groupBox")
+        self.GiroscopioNoCalibrado = PlotWidget(self.groupBox)
+        self.GiroscopioNoCalibrado.setGeometry(QtCore.QRect(20, 40, 291, 171))
+        self.GiroscopioNoCalibrado.setObjectName("GiroscopioNoCalibrado")
+        self.label_4 = QtWidgets.QLabel(self.groupBox)
+        self.label_4.setGeometry(QtCore.QRect(20, 20, 71, 16))
+        self.label_4.setObjectName("label_4")
+        self.label_5 = QtWidgets.QLabel(self.groupBox)
+        self.label_5.setGeometry(QtCore.QRect(20, 220, 71, 16))
+        self.label_5.setObjectName("label_5")
+        self.label_6 = QtWidgets.QLabel(self.groupBox)
+        self.label_6.setGeometry(QtCore.QRect(20, 420, 71, 16))
+        self.label_6.setObjectName("label_6")
+        self.AcelerometroNoCalibrado = PlotWidget(self.groupBox)
+        self.AcelerometroNoCalibrado.setGeometry(QtCore.QRect(20, 240, 291, 171))
+        self.AcelerometroNoCalibrado.setObjectName("AcelerometroNoCalibrado")
+        self.MagnetometroNoCalibrado = PlotWidget(self.groupBox)
+        self.MagnetometroNoCalibrado.setGeometry(QtCore.QRect(20, 440, 291, 171))
+        self.MagnetometroNoCalibrado.setObjectName("MagnetometroNoCalibrado")
+        self.label_2 = QtWidgets.QLabel(Form)
+        self.label_2.setGeometry(QtCore.QRect(20, 10, 301, 41))
+        self.label_2.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
+        self.label_2.setObjectName("label_2")
+        self.label_3 = QtWidgets.QLabel(Form)
+        self.label_3.setGeometry(QtCore.QRect(10, 10, 1071, 31))
+        self.label_3.setObjectName("label_3")
+        self.groupBox_2 = QtWidgets.QGroupBox(Form)
+        self.groupBox_2.setGeometry(QtCore.QRect(370, 50, 331, 631))
+        self.groupBox_2.setObjectName("groupBox_2")
+        self.GiroscopioNoCalibrado_2 = PlotWidget(self.groupBox_2)
+        self.GiroscopioNoCalibrado_2.setGeometry(QtCore.QRect(20, 40, 291, 171))
+        self.GiroscopioNoCalibrado_2.setObjectName("GiroscopioNoCalibrado_2")
+        self.label_7 = QtWidgets.QLabel(self.groupBox_2)
+        self.label_7.setGeometry(QtCore.QRect(20, 20, 71, 16))
+        self.label_7.setObjectName("label_7")
+        self.label_8 = QtWidgets.QLabel(self.groupBox_2)
+        self.label_8.setGeometry(QtCore.QRect(20, 220, 71, 16))
+        self.label_8.setObjectName("label_8")
+        self.label_9 = QtWidgets.QLabel(self.groupBox_2)
+        self.label_9.setGeometry(QtCore.QRect(20, 420, 71, 16))
+        self.label_9.setObjectName("label_9")
+        self.AcelerometroNoCalibrado_2 = PlotWidget(self.groupBox_2)
+        self.AcelerometroNoCalibrado_2.setGeometry(QtCore.QRect(20, 240, 291, 171))
+        self.AcelerometroNoCalibrado_2.setObjectName("AcelerometroNoCalibrado_2")
+        self.MagnetometroNoCalibrado_2 = PlotWidget(self.groupBox_2)
+        self.MagnetometroNoCalibrado_2.setGeometry(QtCore.QRect(20, 440, 291, 171))
+        self.MagnetometroNoCalibrado_2.setObjectName("MagnetometroNoCalibrado_2")
+        self.groupBox_3 = QtWidgets.QGroupBox(Form)
+        self.groupBox_3.setGeometry(QtCore.QRect(720, 360, 331, 241))
+        self.groupBox_3.setObjectName("groupBox_3")
+        self.GiroscopioNoCalibrado_4 = PlotWidget(self.groupBox_3)
+        self.GiroscopioNoCalibrado_4.setGeometry(QtCore.QRect(20, 30, 291, 191))
+        self.GiroscopioNoCalibrado_4.setObjectName("GiroscopioNoCalibrado_4")
+        self.groupBox_4 = QtWidgets.QGroupBox(Form)
+        self.groupBox_4.setGeometry(QtCore.QRect(720, 50, 331, 101))
+        self.groupBox_4.setObjectName("groupBox_4")
+        self.verticalLayoutWidget = QtWidgets.QWidget(self.groupBox_4)
+        self.verticalLayoutWidget.setGeometry(QtCore.QRect(20, 30, 291, 53))
+        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.comboBox = QtWidgets.QComboBox(self.verticalLayoutWidget)
+        self.comboBox.setCurrentText("")
+        self.comboBox.setObjectName("comboBox")
+        self.verticalLayout.addWidget(self.comboBox)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.pushButton_3 = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.pushButton_3.setObjectName("pushButton_3")
+        self.horizontalLayout.addWidget(self.pushButton_3)
+        self.pushButton_2 = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.pushButton_2.setObjectName("pushButton_2")
+        self.horizontalLayout.addWidget(self.pushButton_2)
+        self.verticalLayout.addLayout(self.horizontalLayout)
+        self.groupBox_5 = QtWidgets.QGroupBox(Form)
+        self.groupBox_5.setGeometry(QtCore.QRect(720, 160, 331, 191))
+        self.groupBox_5.setObjectName("groupBox_5")
+        self.plainTextEdit = QtWidgets.QPlainTextEdit(self.groupBox_5)
+        self.plainTextEdit.setGeometry(QtCore.QRect(20, 60, 291, 111))
+        self.plainTextEdit.setObjectName("plainTextEdit")
+        self.pushButton = QtWidgets.QPushButton(self.groupBox_5)
+        self.pushButton.setGeometry(QtCore.QRect(20, 30, 291, 23))
+        self.pushButton.setObjectName("pushButton")
+
+        self.puerto_serial = None
+        self.groupBox.setEnabled(False)
+        self.groupBox_2.setEnabled(False)
+        self.groupBox_3.setEnabled(False)
+        self.groupBox_5.setEnabled(False)
+        self.plainTextEdit.setReadOnly(True)
+        sys.stdout = OutputRedirector(self.plainTextEdit)
+        self.comboBox.showPopup = self.on_combobox_click
+        self.pushButton.setEnabled(False)
+        self.pushButton.clicked.connect(self.AdquirirDatos)
+        self.pushButton_2.setEnabled(False)
+        self.pushButton_2.clicked.connect(self.ConectarPuerto)
+        self.pushButton_3.setEnabled(False)
+        self.pushButton_3.clicked.connect(self.DesconectarPuerto)
+
+        self.retranslateUi(Form)
+        QtCore.QMetaObject.connectSlotsByName(Form)
+
+    def ListarPuertos(self):    
+        combo = self.comboBox 
+        combo.clear()
+        
+        puertos = serial.tools.list_ports.comports()
+        
+        if puertos:
+            for puerto in puertos:
+                combo.addItem(f"{puerto.device} - {puerto.description}", userData=puerto.device)
+                self.pushButton_2.setEnabled(True)
+        else:
+            combo.addItem("No hay puertos disponibles")
+            self.pushButton_2.setEnabled(False)
+
+    def ConectarPuerto(self):
+        self.groupBox_5.setEnabled(True)
+
+        if not self.puerto_serial or not self.puerto_serial.is_open:
+            puerto_nom = self.ObtenerPuertoSeleccionado()
+            
+            if not puerto_nom or puerto_nom == "No hay puertos disponibles":
+                print("Selecciona un puerto válido antes de conectar.")
+                return
+
+            try:
+                self.puerto_serial = serial.Serial(
+                    port=puerto_nom,
+                    baudrate=9600,
+                    timeout=0.5
+                )
+                time.sleep(1.5)
+                self.puerto_serial.reset_input_buffer()
+                
+                self.pushButton.setEnabled(True)
+                self.pushButton_2.setEnabled(False)
+                self.pushButton_3.setEnabled(True)
+                self.comboBox.setEnabled(False)
+                
+                print(f"--- Conectado exitosamente a {puerto_nom} ---")
+
+            except serial.SerialException as e:
+                print(f"Error al abrir el puerto {puerto_nom}: {e}")
+
+    def AdquirirDatos(self):
+        if not self.puerto_serial or not self.puerto_serial.is_open:
+            print("Puerto serial no disponible.")
+            return
+
+        raw = 300
+        # 11 columnas: [index, timer, ax, ay, az, gx, gy, gz, mx, my, mz]
+        datos = numpy.zeros((raw, 11))
+        
+        self.puerto_serial.reset_input_buffer()
+        print("\nCapturando datos...\n")
+        self.puerto_serial.write(b'H')
+        
+        i = 0
+        self.puerto_serial.timeout = 0.2
+        tiempo_inicio = time.time()
+        tiempo_maximo = 20000.0 
+
+        while i < raw:
+            QCoreApplication.processEvents()
+            
+            if not self.puerto_serial or not self.puerto_serial.is_open:
+                print("El puerto se desconectó durante la adquisición.")
+                break
+
+            if time.time() - tiempo_inicio > tiempo_maximo:
+                print(f"\n[TIMEOUT]: Se capturaron {i} de {raw} muestras.")
+                break
+
+            try:
+                bytes_recibidos = self.puerto_serial.readline()
+                if not bytes_recibidos:
+                    continue
+
+                rec = bytes_recibidos.decode("utf-8", errors="ignore").strip()
+                if not rec:
+                    continue
+
+                partes = rec.split()
+                valores = [float(val) for val in partes]
+                
+                if len(valores) == 11:
+                    datos[i][:] = valores
+                    i += 1
+                    print(f"[{len(valores)}][LOG MICRO]: {rec}")
+                else:
+                    print(f"[{len(valores)}][LOG MICRO]: {rec}")
+
+            except ValueError:
+                print(f"[ERR CONVERSIÓN]: {rec}")
+            except Exception as e:
+                print(f"Error durante la lectura: {e}")
+                break
+
+        if i > 0:
+            print(f"\nLectura finalizada. Muestras procesadas: {i}\n")
+            
+            # CONSTANTES DE SENSIBILIDAD
+            SENSITIVITY_ACCEL = 1.0 / 16384.0  # (g)
+            SENSITIVITY_GYRO  = 1.0 / 131.0    # (°/s)
+            SENSITIVITY_MAG   = 0.15           # (µT/LSB)
+
+            eje_x = datos[:i, 0] if numpy.max(datos[:i, 0]) > 0 else numpy.arange(i)
+
+            # Extraer columnas RAW
+            acc_x_raw  = datos[:i, 2]
+            acc_y_raw  = datos[:i, 3]
+            acc_z_raw  = datos[:i, 4]
+            gyro_x_raw = datos[:i, 5]
+            gyro_y_raw = datos[:i, 6]
+            gyro_z_raw = datos[:i, 7]
+            mag_x_raw  = datos[:i, 8]
+            mag_y_raw  = datos[:i, 9]
+            mag_z_raw  = datos[:i, 10]
+
+            # -------------------------------------------------------------
+            # 1. CÁLCULO DE OFFSETS (RAW LSB)
+            # -------------------------------------------------------------
+            off_ax = numpy.mean(acc_x_raw)
+            off_ay = numpy.mean(acc_y_raw)
+            off_az = numpy.mean(acc_z_raw)
+            off_gx = numpy.mean(gyro_x_raw)
+            off_gy = numpy.mean(gyro_y_raw)
+            off_gz = numpy.mean(gyro_z_raw)
+            off_mx = numpy.mean(mag_x_raw)
+            off_my = numpy.mean(mag_y_raw)
+            off_mz = numpy.mean(mag_z_raw)
+
+            print("=" * 55)
+            print("          OFFSETS CALCULADOS EN REPOSO          ")
+            print("=" * 55)
+            print(f" Accel X : {off_ax:10.2f} LSB  ({off_ax * SENSITIVITY_ACCEL:6.3f} g)")
+            print(f" Accel Y : {off_ay:10.2f} LSB  ({off_ay * SENSITIVITY_ACCEL:6.3f} g)")
+            print(f" Accel Z : {off_az:10.2f} LSB  ({off_az * SENSITIVITY_ACCEL:6.3f} g)")
+            print("-" * 55)
+            print(f" Gyro  X : {off_gx:10.2f} LSB  ({off_gx * SENSITIVITY_GYRO:6.2f} °/s)")
+            print(f" Gyro  Y : {off_gy:10.2f} LSB  ({off_gy * SENSITIVITY_GYRO:6.2f} °/s)")
+            print(f" Gyro  Z : {off_gz:10.2f} LSB  ({off_gz * SENSITIVITY_GYRO:6.2f} °/s)")
+            print("-" * 55)
+            print(f" Mag   X : {off_mx:10.2f} LSB  ({off_mx * SENSITIVITY_MAG:6.2f} µT)")
+            print(f" Mag   Y : {off_my:10.2f} LSB  ({off_my * SENSITIVITY_MAG:6.2f} µT)")
+            print(f" Mag   Z : {off_mz:10.2f} LSB  ({off_mz * SENSITIVITY_MAG:6.2f} µT)")
+            print("=" * 55 + "\n")
+
+            # -------------------------------------------------------------
+            # 2. ESCALAMIENTO FÍSICO
+            # -------------------------------------------------------------
+            # NO CALIBRADOS
+            acc_x_nocal = acc_x_raw * SENSITIVITY_ACCEL
+            acc_y_nocal = acc_y_raw * SENSITIVITY_ACCEL
+            acc_z_nocal = acc_z_raw * SENSITIVITY_ACCEL
+
+            gyro_x_nocal = gyro_x_raw * SENSITIVITY_GYRO
+            gyro_y_nocal = gyro_y_raw * SENSITIVITY_GYRO
+            gyro_z_nocal = gyro_z_raw * SENSITIVITY_GYRO
+
+            mag_x_nocal = mag_x_raw * SENSITIVITY_MAG
+            mag_y_nocal = mag_y_raw * SENSITIVITY_MAG
+            mag_z_nocal = mag_z_raw * SENSITIVITY_MAG
+
+            # CALIBRADOS
+            acc_x_cal = (acc_x_raw - off_ax) * SENSITIVITY_ACCEL
+            acc_y_cal = (acc_y_raw - off_ay) * SENSITIVITY_ACCEL
+            acc_z_cal = (acc_z_raw - off_az) * SENSITIVITY_ACCEL
+
+            gyro_x_cal = (gyro_x_raw - off_gx) * SENSITIVITY_GYRO
+            gyro_y_cal = (gyro_y_raw - off_gy) * SENSITIVITY_GYRO
+            gyro_z_cal = (gyro_z_raw - off_gz) * SENSITIVITY_GYRO
+
+            mag_x_cal = (mag_x_raw - off_mx) * SENSITIVITY_MAG
+            mag_y_cal = (mag_y_raw - off_my) * SENSITIVITY_MAG
+            mag_z_cal = (mag_z_raw - off_mz) * SENSITIVITY_MAG
+
+            # -------------------------------------------------------------
+            # 3. GRAFICACIÓN EN INTERFAZ
+            # -------------------------------------------------------------
+            self.groupBox.setEnabled(True)
+            self.groupBox_2.setEnabled(True)
+
+            pen_r = pg.mkPen(color='r', width=1.5)
+            pen_g = pg.mkPen(color='g', width=1.5)
+            pen_b = pg.mkPen(color='b', width=1.5)
+
+            # --- NO CALIBRADOS ---
+            # Giroscopio
+            self.GiroscopioNoCalibrado.clear()
+            self.GiroscopioNoCalibrado.addLegend(labelTextSize='8pt')
+            self.GiroscopioNoCalibrado.plot(eje_x, gyro_x_nocal, pen=pen_r, name="gx")
+            self.GiroscopioNoCalibrado.plot(eje_x, gyro_y_nocal, pen=pen_g, name="gy")
+            self.GiroscopioNoCalibrado.plot(eje_x, gyro_z_nocal, pen=pen_b, name="gz")
+
+            # Acelerómetro
+            self.AcelerometroNoCalibrado.clear()
+            self.AcelerometroNoCalibrado.addLegend(labelTextSize='8pt')
+            self.AcelerometroNoCalibrado.plot(eje_x, acc_x_nocal, pen=pen_r, name="ax")
+            self.AcelerometroNoCalibrado.plot(eje_x, acc_y_nocal, pen=pen_g, name="ay")
+            self.AcelerometroNoCalibrado.plot(eje_x, acc_z_nocal, pen=pen_b, name="az")
+
+            # Magnetómetro
+            self.MagnetometroNoCalibrado.clear()
+            self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
+            self.MagnetometroNoCalibrado.plot(eje_x, mag_x_nocal, pen=pen_r, name="mx")
+            self.MagnetometroNoCalibrado.plot(eje_x, mag_y_nocal, pen=pen_g, name="my")
+            self.MagnetometroNoCalibrado.plot(eje_x, mag_z_nocal, pen=pen_b, name="mz")
+
+            # --- CALIBRADOS ---
+            # Giroscopio Calibrado
+            self.GiroscopioNoCalibrado_2.clear()
+            self.GiroscopioNoCalibrado_2.addLegend(labelTextSize='8pt')
+            self.GiroscopioNoCalibrado_2.plot(eje_x, gyro_x_cal, pen=pen_r, name="gx cal")
+            self.GiroscopioNoCalibrado_2.plot(eje_x, gyro_y_cal, pen=pen_g, name="gy cal")
+            self.GiroscopioNoCalibrado_2.plot(eje_x, gyro_z_cal, pen=pen_b, name="gz cal")
+
+            # Acelerómetro Calibrado
+            self.AcelerometroNoCalibrado_2.clear()
+            self.AcelerometroNoCalibrado_2.addLegend(labelTextSize='8pt')
+            self.AcelerometroNoCalibrado_2.plot(eje_x, acc_x_cal, pen=pen_r, name="ax cal")
+            self.AcelerometroNoCalibrado_2.plot(eje_x, acc_y_cal, pen=pen_g, name="ay cal")
+            self.AcelerometroNoCalibrado_2.plot(eje_x, acc_z_cal, pen=pen_b, name="az cal")
+
+            # Magnetómetro Calibrado
+            self.MagnetometroNoCalibrado_2.clear()
+            self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
+            self.MagnetometroNoCalibrado_2.plot(eje_x, mag_x_cal, pen=pen_r, name="mx cal")
+            self.MagnetometroNoCalibrado_2.plot(eje_x, mag_y_cal, pen=pen_g, name="my cal")
+            self.MagnetometroNoCalibrado_2.plot(eje_x, mag_z_cal, pen=pen_b, name="mz cal")
+
+        else:
+            print("No se recibieron datos válidos del MPU9250.")
+
+    def DesconectarPuerto(self):
+        if self.puerto_serial and self.puerto_serial.is_open:
+            try:
+                self.puerto_serial.close()
+                self.puerto_serial = None
+                
+                self.comboBox.setEnabled(True)
+                self.pushButton.setEnabled(False)
+                self.pushButton_2.setEnabled(True)
+                self.pushButton_3.setEnabled(False)
+                print("--- Puerto Desconectado ---")
+            except Exception as e:
+                print(f"Error al cerrar el puerto: {e}")
+
+    def ObtenerPuertoSeleccionado(self):
+        return self.comboBox.currentData()
+
+    def on_combobox_click(self):
+        self.ListarPuertos()
+        QComboBox.showPopup(self.comboBox)
+
+    def retranslateUi(self, Form):
+        _translate = QtCore.QCoreApplication.translate
+        Form.setWindowTitle(_translate("Form", "Form"))
+        self.label.setText(_translate("Form", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Integrantes: <br />Diego Alejandro Arellano Gutierrez - 110847<br />Edwar Felipe García Patiño - 142911<br />Javier Bohorquez Gaitán - 98587<br />Johan Montejo - 124077<br />Sergio Iván Jaimes Garzón - 133238</p></body></html>"))
+        self.groupBox.setTitle(_translate("Form", "Datos No Calibrados "))
+        self.label_4.setText(_translate("Form", "Giroscopio"))
+        self.label_5.setText(_translate("Form", "Acelerometro"))
+        self.label_6.setText(_translate("Form", "Magnetometro"))
+        self.label_2.setText(_translate("Form", "<html><head/><body><p><img src=\":/newPrefix/UNIVERSIDAD_ECCI.png\" width=\"150\"/></p></body></html>"))
+        self.label_3.setText(_translate("Form", "<html><head/><body><p align=\"center\"><span style=\" font-size:16pt;\">MPU9250 - ADQUISICION, CALIBRACION Y GRAFICACION DE DATOS</span></p></body></html>"))
+        self.groupBox_2.setTitle(_translate("Form", "Datos Calibrados "))
+        self.label_7.setText(_translate("Form", "Giroscopio"))
+        self.label_8.setText(_translate("Form", "Acelerometro"))
+        self.label_9.setText(_translate("Form", "Magnetometro"))
+        self.groupBox_3.setTitle(_translate("Form", "Ángulos de Euler"))
+        self.groupBox_4.setTitle(_translate("Form", "Comunicación Serial"))
+        self.pushButton_3.setText(_translate("Form", "Desconectar"))
+        self.pushButton_2.setText(_translate("Form", "Conectar"))
+        self.groupBox_5.setTitle(_translate("Form", "Monitor Serial"))
+        self.pushButton.setText(_translate("Form", "Adquirir Datos"))
+
+from pyqtgraph import PlotWidget
+import IMG_rc
+
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    Form = QtWidgets.QWidget()
+    ui = Ui_Form()
+    ui.setupUi(Form)
+    Form.show()
+    sys.exit(app.exec_())
