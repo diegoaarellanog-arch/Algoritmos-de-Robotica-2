@@ -317,9 +317,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             self.eje_x = self.datosMag[:self.i, 0] if numpy.max(self.datosMag[:self.i, 0]) > 0 else numpy.arange(self.i)
 
             # Extraer columnas RAW
-            self.mag_x_raw  = self.datosMag[:self.i, 2]
-            self.mag_y_raw  = self.datosMag[:self.i, 3]
-            self.mag_z_raw  = self.datosMag[:self.i, 4]
+            self.mag_x_raw  = self.datosMag[:self.i, 3]
+            self.mag_y_raw  = self.datosMag[:self.i, 2]
+            self.mag_z_raw  = -self.datosMag[:self.i, 4]
 
             self.EscalamientoFisico()
 
@@ -403,9 +403,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             self.gyro_x_raw = self.datos[:self.i, 5]
             self.gyro_y_raw = self.datos[:self.i, 6]
             self.gyro_z_raw = self.datos[:self.i, 7]     
-            self.mag_x_raw  = self.datos[:self.i, 8]
-            self.mag_y_raw  = self.datos[:self.i, 9]
-            self.mag_z_raw  = self.datos[:self.i, 10]
+            self.mag_x_raw  = self.datos[:self.i, 9]
+            self.mag_y_raw  = self.datos[:self.i, 8]
+            self.mag_z_raw  = -self.datos[:self.i, 10]
 
             self.EscalamientoFisico()
 
@@ -442,8 +442,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
     def CalibrarMagX(self):
         if self.i > 0:
-            self.pushButton_10.setEnabled(True)
-            self.ImprimirGraf()
+            self.pushButton_10.setEnabled(True)            
 
             self.mag_y_nocal_testyz = self.mag_y_nocal
             self.mag_z_nocal_testyz = self.mag_z_nocal
@@ -471,8 +470,11 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
             self.mag_y_nocal_testxy = self.mag_y_nocal
             self.mag_x_nocal_testxy = self.mag_x_nocal
-            self.mag_x_nocal_testxy = (self.mag_x_raw - self.off_mx) * self.scale_x / SENSITIVITY_MAG
+            self.mag_x_cal_testxy = (self.mag_x_raw - self.off_mx) * self.scale_x / SENSITIVITY_MAG
             self.mag_y_cal_testxy = (self.mag_y_raw - self.off_my) * self.scale_y / SENSITIVITY_MAG
+
+            self.pushButton_9.setEnabled(True)
+            
 
     def CalibrarMagZ(self):
         if self.i > 0:
@@ -488,6 +490,13 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             print("=" * 55)
             print(f" Mag   Z : {self.off_mz:10.2f} LSB  ({self.off_mz * SENSITIVITY_MAG:6.2f} µT)")
             print("=" * 55 + "\n")
+
+            self.mag_x_nocal_testxz = self.mag_x_nocal
+            self.mag_z_nocal_testxz = (self.mag_z_raw - self.off_mz) * self.scale_z / SENSITIVITY_MAG
+            self.mag_x_cal_testxz = self.mag_x_cal
+            self.mag_z_cal_testxz = (self.mag_z_raw - self.off_mz) * self.scale_z / SENSITIVITY_MAG
+
+            self.pushButton_7.setEnabled(True)
 
     def CalcularAngulosEuler(self, eje_x):
         # Verificamos que existan los datos calibrados
@@ -531,15 +540,20 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
     def EscalamientoFisico(self):
         if self.RecMag:
-            # NO CALIBRADOS
-            self.mag_x_nocal = self.mag_x_raw * SENSITIVITY_MAG
-            self.mag_y_nocal = self.mag_y_raw * SENSITIVITY_MAG
-            self.mag_z_nocal = self.mag_z_raw * SENSITIVITY_MAG
 
+            self.mag_x_nocal = self.mag_x_raw / SENSITIVITY_MAG
+            self.mag_y_nocal = self.mag_y_raw / SENSITIVITY_MAG
+            self.mag_z_nocal = self.mag_z_raw / SENSITIVITY_MAG
+                    
             self.scale_x = (numpy.max(self.mag_x_nocal) - numpy.min(self.mag_x_nocal))/2
             self.scale_y = (numpy.max(self.mag_y_nocal) - numpy.min(self.mag_y_nocal))/2
             self.scale_z = (numpy.max(self.mag_z_nocal) - numpy.min(self.mag_z_nocal))/2
 
+            # NO CALIBRADOS
+            self.mag_x_nocal = self.mag_x_raw * self.scale_x / SENSITIVITY_MAG
+            self.mag_y_nocal = self.mag_y_raw * self.scale_y / SENSITIVITY_MAG
+            self.mag_z_nocal = self.mag_z_raw * self.scale_z / SENSITIVITY_MAG
+        
             # CALIBRADOS
             if self.MagXCalibrado:
                 self.mag_x_cal = (self.mag_x_raw - self.off_mx) * self.scale_x / SENSITIVITY_MAG
@@ -551,9 +565,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
                 self.mag_z_cal = (self.mag_z_raw - self.off_mz) * self.scale_z / SENSITIVITY_MAG
 
 
-            self.pushButton_7.setEnabled(True)
             self.pushButton_5.setEnabled(True)
-            self.pushButton_9.setEnabled(True)
+            
+            
 
         if self.RecGirAce:
             # NO CALIBRADOS
@@ -590,8 +604,8 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         # Magnetómetro
         self.MagnetometroNoCalibrado.clear()
         self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
-        self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_z_nocal, pen=pen_r, name="mxz")
-        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_z_nocal, pen=pen_g, name="myz")
+        self.MagnetometroNoCalibrado.plot(self.mag_y_nocal_testyz, self.mag_z_nocal_testyz, pen=pen_r, name="myz")
+        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxz, self.mag_z_nocal_testxz, pen=pen_g, name="mxz")
         self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxy, self.mag_y_nocal_testxy, pen=pen_b, name="mxy")
 
         # --- CALIBRADOS ---
@@ -599,8 +613,8 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         if self.MagYCalibrado or self.MagZCalibrado:
             self.MagnetometroNoCalibrado_2.clear()
             self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
-            self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=pen_r, name="myz cal")
-            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_z_cal, pen=pen_g, name="mxz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal_testyz, self.mag_z_cal_testyz, pen=pen_r, name="myz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxz, self.mag_z_cal_testxz, pen=pen_g, name="mxz cal")
             self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxy, self.mag_y_cal_testxy, pen=pen_b, name="mxy cal")
 
 
@@ -671,7 +685,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
             # --- CALIBRADOS ---
             # Magnetómetro Calibrado
-            if self.MagYCalibrado or self.MagZCalibrado:
+            if self.MagYCalibrado and self.MagZCalibrado:
                 self.MagnetometroNoCalibrado_2.clear()
                 self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
                 self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=pen_r, name="myz cal")
