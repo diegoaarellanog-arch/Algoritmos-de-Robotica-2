@@ -444,6 +444,11 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         if self.i > 0:
             self.pushButton_10.setEnabled(True)
             self.ImprimirGraf()
+
+            self.mag_y_nocal_testyz = self.mag_y_nocal
+            self.mag_z_nocal_testyz = self.mag_z_nocal
+            self.mag_y_cal_testyz = self.mag_y_cal
+            self.mag_z_cal_testyz = self.mag_z_cal
             
 
     def CalibrarMagY(self):
@@ -464,8 +469,10 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             print(f" Mag   Y : {self.off_my:10.2f} LSB  ({self.off_my * SENSITIVITY_MAG:6.2f} µT)")
             print("=" * 55 + "\n")
 
-            self.mag_y_nocal_test = self.mag_y_nocal
-            self.mag_x_nocal_test = self.mag_x_nocal
+            self.mag_y_nocal_testxy = self.mag_y_nocal
+            self.mag_x_nocal_testxy = self.mag_x_nocal
+            self.mag_x_nocal_testxy = (self.mag_x_raw - self.off_mx) * self.scale_x / SENSITIVITY_MAG
+            self.mag_y_cal_testxy = (self.mag_y_raw - self.off_my) * self.scale_y / SENSITIVITY_MAG
 
     def CalibrarMagZ(self):
         if self.i > 0:
@@ -573,7 +580,29 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.Graficar()
 
     def ImprimirGraf(self):
-        pass
+        styles = {'color': '#000000', 'font-size': '10px'}
+
+        pen_r = pg.mkPen(color='r', width=1.5)
+        pen_g = pg.mkPen(color='g', width=1.5)
+        pen_b = pg.mkPen(color='b', width=1.5)
+
+        # --- NO CALIBRADOS ---
+        # Magnetómetro
+        self.MagnetometroNoCalibrado.clear()
+        self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
+        self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_z_nocal, pen=pen_r, name="mxz")
+        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_z_nocal, pen=pen_g, name="myz")
+        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxy, self.mag_y_nocal_testxy, pen=pen_b, name="mxy")
+
+        # --- CALIBRADOS ---
+        # Magnetómetro Calibrado
+        if self.MagYCalibrado or self.MagZCalibrado:
+            self.MagnetometroNoCalibrado_2.clear()
+            self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
+            self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=pen_r, name="myz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_z_cal, pen=pen_g, name="mxz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxy, self.mag_y_cal_testxy, pen=pen_b, name="mxy cal")
+
 
     def Graficar(self):
         self.groupBox.setEnabled(True)
