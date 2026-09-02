@@ -271,14 +271,17 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.pushButton_4.setEnabled(False)
         self.pushButton_4.clicked.connect(self.AdquirirGirAce)
         self.pushButton_5.setEnabled(False)
-        self.pushButton_5.clicked.connect(self.CalibrarMagXY)
+        self.pushButton_5.clicked.connect(self.CalibrarMagY)
         self.pushButton_6.setEnabled(False)
         self.pushButton_6.clicked.connect(self.CalibrarGirAce)
         self.pushButton_7.setEnabled(False)
-        self.pushButton_7.clicked.connect(self.CalibrarMagZ)
+        self.pushButton_7.clicked.connect(self.CalibrarMagX)
         self.pushButton_8.setEnabled(False)
         self.pushButton_8.clicked.connect(self.AdquirirTodo)
         self.pushButton_9.setEnabled(False)
+        self.pushButton_9.clicked.connect(self.CalibrarMagZ)
+        self.pushButton_10.setEnabled(False)
+        self.pushButton_10.clicked.connect(self.ImprimirGraf)
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
@@ -437,7 +440,13 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             print(f" Gyro  Z : {self.off_gz:10.2f} LSB  ({self.off_gz * SENSITIVITY_GYRO:6.2f} °/s)")
             print("=" * 55 + "\n")
 
-    def CalibrarMagXY(self):
+    def CalibrarMagX(self):
+        if self.i > 0:
+            self.pushButton_10.setEnabled(True)
+            self.ImprimirGraf()
+            
+
+    def CalibrarMagY(self):
         if self.i > 0:
             # -------------------------------------------------------------
             # 1. CÁLCULO DE OFFSETS (RAW LSB)
@@ -445,7 +454,8 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             self.off_mx = numpy.mean(self.mag_x_raw)
             self.off_my = numpy.mean(self.mag_y_raw)
       
-            self.MagXYCalibrado = True  # Marcar como calibrado
+            self.MagXCalibrado = True  # Marcar como calibrado
+            self.MagYCalibrado = True  # Marcar como calibrado
 
             print("=" * 55)
             print("          OFFSETS CALCULADOS          ")
@@ -453,6 +463,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             print(f" Mag   X : {self.off_mx:10.2f} LSB  ({self.off_mx * SENSITIVITY_MAG:6.2f} µT)")
             print(f" Mag   Y : {self.off_my:10.2f} LSB  ({self.off_my * SENSITIVITY_MAG:6.2f} µT)")
             print("=" * 55 + "\n")
+
+            self.mag_y_nocal_test = self.mag_y_nocal
+            self.mag_x_nocal_test = self.mag_x_nocal
 
     def CalibrarMagZ(self):
         if self.i > 0:
@@ -558,6 +571,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             self.pushButton_6.setEnabled(True)  # Habilitar el botón de calibración de Giroscopio y Acelerómetro
 
         self.Graficar()
+
+    def ImprimirGraf(self):
+        pass
 
     def Graficar(self):
         self.groupBox.setEnabled(True)
@@ -826,9 +842,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.pushButton.setText(_translate("Form", "Magn"))
         self.pushButton_8.setText(_translate("Form", "Giro/Acel/Magn"))
         self.pushButton_6.setText(_translate("Form", "Giro/Acel"))
-        self.pushButton_7.setText(_translate("Form", "Magn X"))
-        self.pushButton_5.setText(_translate("Form", "Magn Y"))
-        self.pushButton_9.setText(_translate("Form", "Magn Z"))
+        self.pushButton_7.setText(_translate("Form", "Adquirir YZ (X)"))
+        self.pushButton_5.setText(_translate("Form", "Magn Y (Z)"))
+        self.pushButton_9.setText(_translate("Form", "Magn Z (Y)"))
         self.pushButton_10.setText(_translate("Form", "Graficar Calibraciones"))
         self.label_15.setText(_translate("Form", "N. Muestras"))
         self.label_16.setText(_translate("Form", "T. Max (s)"))
