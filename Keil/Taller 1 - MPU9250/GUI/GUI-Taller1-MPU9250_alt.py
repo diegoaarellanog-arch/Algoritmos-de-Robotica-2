@@ -74,6 +74,8 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.off_mx = 0.0
         self.off_my = 0.0
         self.off_mz = 0.0
+        self.RecGirAce = False
+        self.RecMag = False
 
         #------------------------------------------------------------
         #               CONFIGURACION DE LA INTERFAZ
@@ -276,6 +278,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.pushButton_7.clicked.connect(self.CalibrarMagZ)
         self.pushButton_8.setEnabled(False)
         self.pushButton_8.clicked.connect(self.AdquirirTodo)
+        self.pushButton_9.setEnabled(False)
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
@@ -346,7 +349,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
 
 
-            eje_x = self.datosGirAce[:self.i, 0] if numpy.max(self.datosGirAce[:self.i, 0]) > 0 else numpy.arange(self.i)
+            self.eje_x = self.datosGirAce[:self.i, 0] if numpy.max(self.datosGirAce[:self.i, 0]) > 0 else numpy.arange(self.i)
 
             # Extraer columnas RAW
             self.acc_x_raw  = self.datosGirAce[:self.i, 2]
@@ -400,6 +403,8 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             self.mag_x_raw  = self.datos[:self.i, 8]
             self.mag_y_raw  = self.datos[:self.i, 9]
             self.mag_z_raw  = self.datos[:self.i, 10]
+
+            self.EscalamientoFisico()
 
         else:
             print("No se recibieron datos válidos del MPU9250.")
@@ -525,6 +530,11 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             if self.MagZCalibrado:
                 self.mag_z_cal = (self.mag_z_raw - self.off_mz) * self.scale_z / SENSITIVITY_MAG
 
+
+            self.pushButton_7.setEnabled(True)
+            self.pushButton_5.setEnabled(True)
+            self.pushButton_9.setEnabled(True)
+
         if self.RecGirAce:
             # NO CALIBRADOS
             self.acc_x_nocal = self.acc_x_raw * SENSITIVITY_ACCEL
@@ -560,7 +570,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         pen_b = pg.mkPen(color='b', width=1.5)
 
         if self.RecGirAce:
-            self.RecMag = False
+            self.RecGirAce = False
 
             # --- NO CALIBRADOS ---
             # Giroscopio
@@ -568,18 +578,18 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             self.GiroscopioNoCalibrado.addLegend(labelTextSize='8pt', offset=(-15, 15))
             self.GiroscopioNoCalibrado.setLabel('left', 'Vel. Angular', units='°/s',)
             self.GiroscopioNoCalibrado.setLabel('bottom', 'Muestras')       
-            self.GiroscopioNoCalibrado.plot(eje_x, self.gyro_x_nocal, pen=pen_r, name="gx")
-            self.GiroscopioNoCalibrado.plot(eje_x, self.gyro_y_nocal, pen=pen_g, name="gy")
-            self.GiroscopioNoCalibrado.plot(eje_x, self.gyro_z_nocal, pen=pen_b, name="gz")
+            self.GiroscopioNoCalibrado.plot(self.gyro_x_nocal, pen=pen_r, name="gx")
+            self.GiroscopioNoCalibrado.plot(self.gyro_y_nocal, pen=pen_g, name="gy")
+            self.GiroscopioNoCalibrado.plot(self.gyro_z_nocal, pen=pen_b, name="gz")
 
             # Acelerómetro
             self.AcelerometroNoCalibrado.clear()
             self.AcelerometroNoCalibrado.addLegend(labelTextSize='8pt', offset=(-11, 11))
             self.AcelerometroNoCalibrado.setLabel('left', 'Aceleración', units='g')
             self.AcelerometroNoCalibrado.setLabel('bottom', 'Muestras')
-            self.AcelerometroNoCalibrado.plot(eje_x, self.acc_x_nocal, pen=pen_r, name="ax")
-            self.AcelerometroNoCalibrado.plot(eje_x, self.acc_y_nocal, pen=pen_g, name="ay")
-            self.AcelerometroNoCalibrado.plot(eje_x, self.acc_z_nocal, pen=pen_b, name="az")
+            self.AcelerometroNoCalibrado.plot(self.acc_x_nocal, pen=pen_r, name="ax")
+            self.AcelerometroNoCalibrado.plot(self.acc_y_nocal, pen=pen_g, name="ay")
+            self.AcelerometroNoCalibrado.plot(self.acc_z_nocal, pen=pen_b, name="az")
 
      
             # --- CALIBRADOS ---
@@ -590,40 +600,40 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
                 self.GiroscopioNoCalibrado_2.addLegend(labelTextSize='8pt', offset=(-11, 11))
                 self.GiroscopioNoCalibrado_2.setLabel('left', 'Aceleración', units='g')
                 self.GiroscopioNoCalibrado_2.setLabel('bottom', 'Muestras')
-                self.GiroscopioNoCalibrado_2.plot(eje_x, self.gyro_x_cal, pen=pen_r, name="gx cal")
-                self.GiroscopioNoCalibrado_2.plot(eje_x, self.gyro_y_cal, pen=pen_g, name="gy cal")
-                self.GiroscopioNoCalibrado_2.plot(eje_x, self.gyro_z_cal, pen=pen_b, name="gz cal")
+                self.GiroscopioNoCalibrado_2.plot(self.gyro_x_cal, pen=pen_r, name="gx cal")
+                self.GiroscopioNoCalibrado_2.plot(self.gyro_y_cal, pen=pen_g, name="gy cal")
+                self.GiroscopioNoCalibrado_2.plot(self.gyro_z_cal, pen=pen_b, name="gz cal")
 
                 # Acelerómetro Calibrado
                 self.AcelerometroNoCalibrado_2.clear()
                 self.AcelerometroNoCalibrado_2.addLegend(labelTextSize='8pt', offset=(-11, 11))
                 self.AcelerometroNoCalibrado_2.setLabel('left', 'Aceleración', units='g')
                 self.AcelerometroNoCalibrado_2.setLabel('bottom', 'Muestras')
-                self.AcelerometroNoCalibrado_2.plot(eje_x, self.acc_x_cal, pen=pen_r, name="ax cal")
-                self.AcelerometroNoCalibrado_2.plot(eje_x, self.acc_y_cal, pen=pen_g, name="ay cal")
-                self.AcelerometroNoCalibrado_2.plot(eje_x, self.acc_z_cal, pen=pen_b, name="az cal")
+                self.AcelerometroNoCalibrado_2.plot(self.acc_x_cal, pen=pen_r, name="ax cal")
+                self.AcelerometroNoCalibrado_2.plot(self.acc_y_cal, pen=pen_g, name="ay cal")
+                self.AcelerometroNoCalibrado_2.plot(self.acc_z_cal, pen=pen_b, name="az cal")
 
         if self.RecMag:
-            self.RecGirAce = False
+            self.RecMag = False
 
             # --- NO CALIBRADOS ---
             # Magnetómetro
             self.MagnetometroNoCalibrado.clear()
             self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
-            self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_x_nocal, pen=pen_r, name="mx")
-            self.MagnetometroNoCalibrado.plot(self.mag_z_nocal, self.mag_y_nocal, pen=pen_g, name="my")
-            self.MagnetometroNoCalibrado.plot(self.mag_z_nocal, self.mag_x_nocal, pen=pen_b, name="mz")
+            self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_z_nocal, pen=pen_r, name="mxz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_z_nocal, pen=pen_g, name="myz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_y_nocal, pen=pen_b, name="mxy")
 
             # --- CALIBRADOS ---
             # Magnetómetro Calibrado
             if self.MagYCalibrado or self.MagZCalibrado:
                 self.MagnetometroNoCalibrado_2.clear()
                 self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
-                self.MagnetometroNoCalibrado_2.plot(self.eje_x, self.mag_x_cal, pen=pen_r, name="mx cal")
-                self.MagnetometroNoCalibrado_2.plot(self.eje_x, self.mag_y_cal, pen=pen_g, name="my cal")
-                self.MagnetometroNoCalibrado_2.plot(self.eje_x, self.mag_z_cal, pen=pen_b, name="mz cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=pen_r, name="myz cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_z_cal, pen=pen_g, name="mxz cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_y_cal, pen=pen_b, name="mxy cal")
 
-                self.CalcularAngulosEuler(self.eje_x)
+                #self.CalcularAngulosEuler(self.eje_x)
 
     def ConectarPuerto(self):
         self.groupBox_5.setEnabled(True)
