@@ -16,6 +16,8 @@ from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import QComboBox
 import serial
 import serial.tools.list_ports
+import math 
+import matplotlib.pyplot as plt
 import numpy 
 import time
 import sys
@@ -81,9 +83,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         #               CONFIGURACION DE LA INTERFAZ
         #------------------------------------------------------------
         Form.setObjectName("Form")
-        Form.resize(1072, 712)
+        Form.resize(1500, 712)
         self.label = QtWidgets.QLabel(Form)
-        self.label.setGeometry(QtCore.QRect(710, 570, 221, 121))
+        self.label.setGeometry(QtCore.QRect(1070, 570, 420, 121))
         self.label.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft)
         self.label.setObjectName("label")
         self.groupBox = QtWidgets.QGroupBox(Form)
@@ -136,13 +138,28 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.MagnetometroNoCalibrado_2.setGeometry(QtCore.QRect(10, 460, 321, 191))
         self.MagnetometroNoCalibrado_2.setObjectName("MagnetometroNoCalibrado_2")
         self.groupBox_3 = QtWidgets.QGroupBox(Form)
-        self.groupBox_3.setGeometry(QtCore.QRect(710, 370, 351, 241))
+        self.groupBox_3.setGeometry(QtCore.QRect(710, 40, 351, 661))
         self.groupBox_3.setObjectName("groupBox_3")
         self.GiroscopioNoCalibrado_4 = PlotWidget(self.groupBox_3)
-        self.GiroscopioNoCalibrado_4.setGeometry(QtCore.QRect(10, 20, 321, 211))
+        self.GiroscopioNoCalibrado_4.setGeometry(QtCore.QRect(10, 40, 321, 191))
         self.GiroscopioNoCalibrado_4.setObjectName("GiroscopioNoCalibrado_4")
+        self.AcelerometroNoCalibrado_4 = PlotWidget(self.groupBox_3)
+        self.AcelerometroNoCalibrado_4.setGeometry(QtCore.QRect(10, 250, 321, 191))
+        self.AcelerometroNoCalibrado_4.setObjectName("AcelerometroNoCalibrado_4")
+        self.MagnetometroNoCalibrado_4 = PlotWidget(self.groupBox_3)
+        self.MagnetometroNoCalibrado_4.setGeometry(QtCore.QRect(10, 460, 321, 191))
+        self.MagnetometroNoCalibrado_4.setObjectName("MagnetometroNoCalibrado_4")
+        self.label_19 = QtWidgets.QLabel(self.groupBox_3)
+        self.label_19.setGeometry(QtCore.QRect(10, 20, 71, 16))
+        self.label_19.setObjectName("label_19")
+        self.label_20 = QtWidgets.QLabel(self.groupBox_3)
+        self.label_20.setGeometry(QtCore.QRect(10, 230, 71, 16))
+        self.label_20.setObjectName("label_20")
+        self.label_21 = QtWidgets.QLabel(self.groupBox_3)
+        self.label_21.setGeometry(QtCore.QRect(10, 440, 71, 16))
+        self.label_21.setObjectName("label_21")
         self.groupBox_4 = QtWidgets.QGroupBox(Form)
-        self.groupBox_4.setGeometry(QtCore.QRect(710, 40, 351, 111))
+        self.groupBox_4.setGeometry(QtCore.QRect(1070, 40, 420, 111))
         self.groupBox_4.setObjectName("groupBox_4")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.groupBox_4)
         self.verticalLayoutWidget.setGeometry(QtCore.QRect(10, 20, 331, 81))
@@ -179,7 +196,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.horizontalLayout.addWidget(self.pushButton_2)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.groupBox_5 = QtWidgets.QGroupBox(Form)
-        self.groupBox_5.setGeometry(QtCore.QRect(710, 150, 351, 221))
+        self.groupBox_5.setGeometry(QtCore.QRect(1070, 150, 420, 465))
         self.groupBox_5.setObjectName("groupBox_5")
         self.plainTextEdit = QtWidgets.QPlainTextEdit(self.groupBox_5)
         self.plainTextEdit.setGeometry(QtCore.QRect(10, 110, 331, 101))
@@ -394,7 +411,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
 
 
-            eje_x = self.datos[:self.i, 0] if numpy.max(self.datos[:self.i, 0]) > 0 else numpy.arange(self.i)
+            self.eje_x = self.datos[:self.i, 0] if numpy.max(self.datos[:self.i, 0]) > 0 else numpy.arange(self.i)
 
             # Extraer columnas RAW
             self.acc_x_raw  = self.datos[:self.i, 2]
@@ -498,45 +515,82 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
             self.pushButton_7.setEnabled(True)
 
-    def CalcularAngulosEuler(self, eje_x):
-        # Verificamos que existan los datos calibrados
-        if not hasattr(self, 'acc_x_cal') or not hasattr(self, 'mag_x_cal'):
-            print("Por favor, calibra los datos antes de calcular los ángulos de Euler.")
-            return
+    def CalcularAngulosEuler(self):
+        A = 0.6
+        B = 0.4
+        dt = 0.01
+        rad2deg = 180/3.141592
+        Roll=numpy.zeros(((self.raw+1),4))
+        Pitch=numpy.zeros(((self.raw+1),4))
 
-        # 1. Calcular Roll y Pitch en radianes usando el Acelerómetro
-        self.roll_rad = numpy.arctan2(self.acc_y_cal, self.acc_z_cal)
-        self.pitch_rad = numpy.arctan2(-self.acc_x_cal, numpy.sqrt(self.acc_y_cal**2 + self.acc_z_cal**2))
+        Roll[self.raw][0] = self.raw
+        Pitch[self.raw][0] = self.raw
+        for i in range(0,self.raw):
+            Roll[i][0] = i
+            Pitch[i][0] = i
+            #Acelerómetro
+            Roll[i+1][1] = (math.atan2(self.acc_y_cal[i],self.acc_z_cal[i]))*rad2deg
+            Pitch[i+1][1] = (math.atan2(-self.acc_x_cal[i],math.sqrt((self.acc_y_cal[i]*self.acc_y_cal[i])+(self.acc_z_cal[i]*self.acc_z_cal[i]))))*rad2deg
+            #print("RollA[%d+1][1]: ",i,Roll[i+1][1])
+            #Giroscópio
+            Roll[i+1][2] = Roll[i][3]+((self.gyro_x_cal[i]*dt)*rad2deg)
+            Pitch[i+1][2] = Pitch[i][3]+((self.gyro_y_cal[i]*dt)*rad2deg)
+            #print("RollG[%d+1][2]: ",i,Roll[i+1][2])
+            #Filtro complementario
+            Roll[i+1][3] = (A*Roll[i+1][2])+(B*Roll[i+1][1])
+            Pitch[i+1][3] = (A*Pitch[i+1][2])+(B*Pitch[i+1][1])
+            #print("RollC[%d+1][3]: ",i,Roll[i+1][3])
 
-        # 2. Compensación de inclinación para el Magnetómetro (Tilt Compensation)
-        mag_x_comp = (self.mag_x_cal * numpy.cos(self.pitch_rad) + 
-                      self.mag_z_cal * numpy.sin(self.pitch_rad))
-        
-        mag_y_comp = (self.mag_x_cal * numpy.sin(self.roll_rad) * numpy.sin(self.pitch_rad) + 
-                      self.mag_y_cal * numpy.cos(self.roll_rad) - 
-                      self.mag_z_cal * numpy.sin(self.roll_rad) * numpy.cos(self.pitch_rad))
 
-        # 3. Calcular Yaw en radianes
-        self.yaw_rad = numpy.arctan2(-mag_y_comp, mag_x_comp)
+        j = plt.figure(5)
+        ax5 = j.subplots(2,2)
+        j.suptitle('ÁNGULO ROLL')
+        ax5[0,0].plot(Roll[:,0], Roll[:,1])
+        ax5[0,0].set_title('Roll Acelerómetro')
+        ax5[0,0].set_xlabel("Muestras")
+        ax5[0,0].set_ylabel("Grados")
+        ax5[0,1].plot(Roll[:,0], Roll[:,2])
+        ax5[0,1].set_title('Roll Giroscópio')
+        ax5[0,1].set_xlabel("Muestras")
+        ax5[0,1].set_ylabel("Grados")
+        ax5[1,0].plot(Roll[:,0], Roll[:,3])
+        ax5[1,0].set_title('Roll Complementario')
+        ax5[1,0].set_xlabel("Muestras")
+        ax5[1,0].set_ylabel("Grados")
+        ax5[1,1].plot(Roll[:,0], Roll[:,1], label='Acel')
+        ax5[1,1].plot(Roll[:,0], Roll[:,2], label='Giro')
+        ax5[1,1].plot(Roll[:,0], Roll[:,3], label='FC')
+        ax5[1,1].set_title('Roll A, G y FC')
+        ax5[1,1].set_xlabel("Muestras")
+        ax5[1,1].set_ylabel("Grados")
+        ax5[1,1].legend(loc='upper left')
+        #j.show()
 
-        # 4. Convertir radianes a grados para visualización
-        self.roll_deg = numpy.degrees(self.roll_rad)
-        self.pitch_deg = numpy.degrees(self.pitch_rad)
-        self.yaw_deg = numpy.degrees(self.yaw_rad)
+        k = plt.figure(6)
+        ax6 = k.subplots(2,2)
+        k.suptitle('ÁNGULO PITCH')
+        ax6[0,0].plot(Pitch[:,0], Pitch[:,1])
+        ax6[0,0].set_title('Pitch Acelerómetro')
+        ax6[0,0].set_xlabel("Muestras")
+        ax6[0,0].set_ylabel("Grados")
+        ax6[0,1].plot(Pitch[:,0], Pitch[:,2])
+        ax6[0,1].set_title('Pitch Giroscópio')
+        ax6[0,1].set_xlabel("Muestras")
+        ax6[0,1].set_ylabel("Grados")
+        ax6[1,0].plot(Pitch[:,0], Pitch[:,3])
+        ax6[1,0].set_title('Pitch Complementario')
+        ax6[1,0].set_xlabel("Muestras")
+        ax6[1,0].set_ylabel("Grados")
+        ax6[1,1].plot(Pitch[:,0], Pitch[:,1], label="Acel")
+        ax6[1,1].plot(Pitch[:,0], Pitch[:,2], label="Giro")
+        ax6[1,1].plot(Pitch[:,0], Pitch[:,3], label="FC")
+        ax6[1,1].set_title('Pitch A, G y FC')
+        ax6[1,1].set_xlabel("Muestras")
+        ax6[1,1].set_ylabel("Grados")
+        ax6[1,1].legend(loc='upper right')
+        #k.show()
 
-        # 5. Graficar en la interfaz (usamos GiroscopioNoCalibrado_4 que está en groupBox_3)
-        pen_r = pg.mkPen(color='r', width=1.5)
-        pen_g = pg.mkPen(color='g', width=1.5)
-        pen_b = pg.mkPen(color='b', width=1.5)
-
-        self.GiroscopioNoCalibrado_4.clear()
-        self.GiroscopioNoCalibrado_4.addLegend(labelTextSize='8pt', offset=(-11, 11))
-        self.GiroscopioNoCalibrado_4.setLabel('left', 'Ángulo', units='°')
-        self.GiroscopioNoCalibrado_4.setLabel('bottom', 'Muestras')
-        
-        self.GiroscopioNoCalibrado_4.plot(eje_x, self.roll_deg, pen=pen_r, name="Roll")
-        self.GiroscopioNoCalibrado_4.plot(eje_x, self.pitch_deg, pen=pen_g, name="Pitch")
-        self.GiroscopioNoCalibrado_4.plot(eje_x, self.yaw_deg, pen=pen_b, name="Yaw")
+        plt.show()
 
     def EscalamientoFisico(self):
         if self.RecMag:
@@ -600,22 +654,25 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         pen_g = pg.mkPen(color='g', width=1.5)
         pen_b = pg.mkPen(color='b', width=1.5)
 
+        simbolo = 'o'       # 'o' para círculos ('t' para triángulos, 's' para cuadrados, etc.)
+        tamaño_puntos = 4   # Diámetro en píxeles
+
         # --- NO CALIBRADOS ---
         # Magnetómetro
         self.MagnetometroNoCalibrado.clear()
         self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
-        self.MagnetometroNoCalibrado.plot(self.mag_y_nocal_testyz, self.mag_z_nocal_testyz, pen=pen_r, name="myz")
-        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxz, self.mag_z_nocal_testxz, pen=pen_g, name="mxz")
-        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxy, self.mag_y_nocal_testxy, pen=pen_b, name="mxy")
+        self.MagnetometroNoCalibrado.plot(self.mag_y_nocal_testyz, self.mag_z_nocal_testyz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz")
+        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxz, self.mag_z_nocal_testxz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz")
+        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxy, self.mag_y_nocal_testxy, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy")
 
         # --- CALIBRADOS ---
         # Magnetómetro Calibrado
         if self.MagYCalibrado or self.MagZCalibrado:
             self.MagnetometroNoCalibrado_2.clear()
             self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
-            self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal_testyz, self.mag_z_cal_testyz, pen=pen_r, name="myz cal")
-            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxz, self.mag_z_cal_testxz, pen=pen_g, name="mxz cal")
-            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxy, self.mag_y_cal_testxy, pen=pen_b, name="mxy cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal_testyz, self.mag_z_cal_testyz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxz, self.mag_z_cal_testxz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxy, self.mag_y_cal_testxy, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy cal")
 
 
     def Graficar(self):
@@ -628,8 +685,10 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         pen_g = pg.mkPen(color='g', width=1.5)
         pen_b = pg.mkPen(color='b', width=1.5)
 
+        simbolo = 'o'       # 'o' para círculos ('t' para triángulos, 's' para cuadrados, etc.)
+        tamaño_puntos = 4   # Diámetro en píxeles
+
         if self.RecGirAce:
-            self.RecGirAce = False
 
             # --- NO CALIBRADOS ---
             # Giroscopio
@@ -673,26 +732,29 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
                 self.AcelerometroNoCalibrado_2.plot(self.acc_z_cal, pen=pen_b, name="az cal")
 
         if self.RecMag:
-            self.RecMag = False
-
             # --- NO CALIBRADOS ---
             # Magnetómetro
             self.MagnetometroNoCalibrado.clear()
             self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
-            self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_z_nocal, pen=pen_r, name="mxz")
-            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_z_nocal, pen=pen_g, name="myz")
-            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_y_nocal, pen=pen_b, name="mxy")
+            self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_z_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_z_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_y_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy")
 
             # --- CALIBRADOS ---
             # Magnetómetro Calibrado
             if self.MagYCalibrado and self.MagZCalibrado:
                 self.MagnetometroNoCalibrado_2.clear()
                 self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
-                self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=pen_r, name="myz cal")
-                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_z_cal, pen=pen_g, name="mxz cal")
-                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_y_cal, pen=pen_b, name="mxy cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_z_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_y_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy cal")
 
-                #self.CalcularAngulosEuler(self.eje_x)
+
+        if self.RecGirAce and self.RecMag and self.MagYCalibrado and self.MagZCalibrado and self.GirAceCalibrado:
+            self.CalcularAngulosEuler()
+
+        self.RecMag = False
+        self.RecGirAce = False
 
     def ConectarPuerto(self):
         self.groupBox_5.setEnabled(True)
@@ -875,6 +937,10 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.label_8.setText(_translate("Form", "Acelerometro"))
         self.label_9.setText(_translate("Form", "Magnetometro"))
         self.groupBox_3.setTitle(_translate("Form", "Ángulos de Euler"))
+        self.groupBox_2.setTitle(_translate("Form", "Datos Calibrados "))
+        self.label_19.setText(_translate("Form", "Roll"))
+        self.label_20.setText(_translate("Form", "Pitch"))
+        self.label_21.setText(_translate("Form", "Yaw"))
         self.groupBox_4.setTitle(_translate("Form", "Comunicación Serial"))
         self.label_13.setText(_translate("Form", "Velocidad"))
         self.label_14.setText(_translate("Form", "Timeout"))
