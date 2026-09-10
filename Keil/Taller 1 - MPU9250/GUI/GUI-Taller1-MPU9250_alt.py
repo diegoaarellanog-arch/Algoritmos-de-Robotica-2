@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 # Form implementation generated from reading ui file 'GUI-Taller1-MPU9250.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.11
@@ -114,7 +115,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.label_2.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.label_2.setObjectName("label_2")
         self.label_3 = QtWidgets.QLabel(Form)
-        self.label_3.setGeometry(QtCore.QRect(10, 0, 1071, 41))
+        self.label_3.setGeometry(QtCore.QRect(10, 0, 1500, 41))
         self.label_3.setObjectName("label_3")
         self.groupBox_2 = QtWidgets.QGroupBox(Form)
         self.groupBox_2.setGeometry(QtCore.QRect(360, 40, 341, 661))
@@ -162,7 +163,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.groupBox_4.setGeometry(QtCore.QRect(1070, 40, 420, 111))
         self.groupBox_4.setObjectName("groupBox_4")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.groupBox_4)
-        self.verticalLayoutWidget.setGeometry(QtCore.QRect(10, 20, 331, 81))
+        self.verticalLayoutWidget.setGeometry(QtCore.QRect(10, 20, 400, 81))
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -199,10 +200,10 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.groupBox_5.setGeometry(QtCore.QRect(1070, 150, 420, 465))
         self.groupBox_5.setObjectName("groupBox_5")
         self.plainTextEdit = QtWidgets.QPlainTextEdit(self.groupBox_5)
-        self.plainTextEdit.setGeometry(QtCore.QRect(10, 110, 331, 101))
+        self.plainTextEdit.setGeometry(QtCore.QRect(10, 110, 400, 101))
         self.plainTextEdit.setObjectName("plainTextEdit")
         self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.groupBox_5)
-        self.verticalLayoutWidget_2.setGeometry(QtCore.QRect(10, 20, 331, 86))
+        self.verticalLayoutWidget_2.setGeometry(QtCore.QRect(10, 20, 400, 86))
         self.verticalLayoutWidget_2.setObjectName("verticalLayoutWidget_2")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_2)
         self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
@@ -433,6 +434,8 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
 
     def CalibrarGirAce(self):
         if self.i > 0:
+            self.pushButton_10.setEnabled(True)            
+
             # -------------------------------------------------------------
             # 1. CÁLCULO DE OFFSETS (RAW LSB)
             # -------------------------------------------------------------
@@ -456,6 +459,20 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             print(f" Gyro  Y : {self.off_gy:10.2f} LSB  ({self.off_gy * SENSITIVITY_GYRO:6.2f} °/s)")
             print(f" Gyro  Z : {self.off_gz:10.2f} LSB  ({self.off_gz * SENSITIVITY_GYRO:6.2f} °/s)")
             print("=" * 55 + "\n")
+
+            self.acc_x_nocal_test = self.acc_x_nocal
+            self.acc_y_nocal_test = self.acc_y_nocal
+            self.acc_z_nocal_test = self.acc_z_nocal
+            self.acc_x_cal_test = (self.acc_x_raw - self.off_ax) * SENSITIVITY_ACCEL
+            self.acc_y_cal_test = (self.acc_y_raw - self.off_ay) * SENSITIVITY_ACCEL
+            self.acc_z_cal_test = (self.acc_z_raw - self.off_az) * SENSITIVITY_ACCEL
+
+            self.gyro_x_nocal_test = self.gyro_x_nocal
+            self.gyro_y_nocal_test = self.gyro_y_nocal
+            self.gyro_z_nocal_test = self.gyro_z_nocal
+            self.gyro_x_cal_test = (self.gyro_x_raw - self.off_gx) * SENSITIVITY_GYRO
+            self.gyro_y_cal_test = (self.gyro_y_raw - self.off_gy) * SENSITIVITY_GYRO
+            self.gyro_z_cal_test = (self.gyro_z_raw - self.off_gz) * SENSITIVITY_GYRO
 
     def CalibrarMagX(self):
         if self.i > 0:
@@ -655,25 +672,68 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         pen_b = pg.mkPen(color='b', width=1.5)
 
         simbolo = 'o'       # 'o' para círculos ('t' para triángulos, 's' para cuadrados, etc.)
-        tamaño_puntos = 4   # Diámetro en píxeles
+        tamaño_puntos = 4   # Diámetro en píxeles                  
 
         # --- NO CALIBRADOS ---
-        # Magnetómetro
-        self.MagnetometroNoCalibrado.clear()
-        self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
-        self.MagnetometroNoCalibrado.plot(self.mag_y_nocal_testyz, self.mag_z_nocal_testyz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz")
-        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxz, self.mag_z_nocal_testxz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz")
-        self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxy, self.mag_y_nocal_testxy, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy")
+        if self.RecMag:
+            # Magnetómetro
+            self.MagnetometroNoCalibrado.clear()
+            self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.MagnetometroNoCalibrado.setLabel('left', 'Componente Magnética Vertical', units='µT')
+            self.MagnetometroNoCalibrado.setLabel('bottom', 'Componente Magnética Horizontal', units='µT')
+            self.MagnetometroNoCalibrado.plot(self.mag_y_nocal_testyz, self.mag_z_nocal_testyz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', symbolPen = pen_r, name="myz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxz, self.mag_z_nocal_testxz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', symbolPen = pen_g, name="mxz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal_testxy, self.mag_y_nocal_testxy, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', symbolPen = pen_b, name="mxy")
 
+        if self.RecGirAce:
+            # Giroscopio
+            self.GiroscopioNoCalibrado.clear()
+            self.GiroscopioNoCalibrado.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.GiroscopioNoCalibrado.setLabel('left', 'Vel. Angular', units='°/s',)
+            self.GiroscopioNoCalibrado.setLabel('bottom', 'Muestras')       
+            self.GiroscopioNoCalibrado.plot(self.gyro_x_nocal_test, pen=pen_r, name="gx")
+            self.GiroscopioNoCalibrado.plot(self.gyro_y_nocal_test, pen=pen_g, name="gy")
+            self.GiroscopioNoCalibrado.plot(self.gyro_z_nocal_test, pen=pen_b, name="gz")
+
+            # Acelerómetro
+            self.AcelerometroNoCalibrado.clear()
+            self.AcelerometroNoCalibrado.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.AcelerometroNoCalibrado.setLabel('left', 'Aceleración', units='g')
+            self.AcelerometroNoCalibrado.setLabel('bottom', 'Muestras')
+            self.AcelerometroNoCalibrado.plot(self.acc_x_nocal_test, pen=pen_r, name="ax")
+            self.AcelerometroNoCalibrado.plot(self.acc_y_nocal_test, pen=pen_g, name="ay")
+            self.AcelerometroNoCalibrado.plot(self.acc_z_nocal_test, pen=pen_b, name="az")
+        
         # --- CALIBRADOS ---
         # Magnetómetro Calibrado
-        if self.MagYCalibrado or self.MagZCalibrado:
+        if self.MagYCalibrado and self.MagZCalibrado:
             self.MagnetometroNoCalibrado_2.clear()
-            self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
-            self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal_testyz, self.mag_z_cal_testyz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz cal")
-            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxz, self.mag_z_cal_testxz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz cal")
-            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxy, self.mag_y_cal_testxy, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy cal")
+            self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.MagnetometroNoCalibrado_2.setLabel('left', 'Componente Magnética Vertical', units='µT')
+            self.MagnetometroNoCalibrado_2.setLabel('bottom', 'Componente Magnética Horizontal', units='µT')
+            self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal_testyz, self.mag_z_cal_testyz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', symbolPen = pen_r, name="myz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxz, self.mag_z_cal_testxz, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', symbolPen = pen_g, name="mxz cal")
+            self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal_testxy, self.mag_y_cal_testxy, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', symbolPen = pen_b, name="mxy cal")
 
+        if self.GirAceCalibrado:
+            # Giroscopio Calibrado
+            self.GiroscopioNoCalibrado_2.clear()
+            self.GiroscopioNoCalibrado_2.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.GiroscopioNoCalibrado_2.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.GiroscopioNoCalibrado_2.setLabel('left', 'Aceleración', units='g')
+            self.GiroscopioNoCalibrado_2.setLabel('bottom', 'Muestras')
+            self.GiroscopioNoCalibrado_2.plot(self.gyro_x_cal_test, pen=pen_r, name="gx cal")
+            self.GiroscopioNoCalibrado_2.plot(self.gyro_y_cal_test, pen=pen_g, name="gy cal")
+            self.GiroscopioNoCalibrado_2.plot(self.gyro_z_cal_test, pen=pen_b, name="gz cal")
+
+            # Acelerómetro Calibrado
+            self.AcelerometroNoCalibrado_2.clear()
+            self.AcelerometroNoCalibrado_2.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.AcelerometroNoCalibrado_2.setLabel('left', 'Aceleración', units='g')
+            self.AcelerometroNoCalibrado_2.setLabel('bottom', 'Muestras')
+            self.AcelerometroNoCalibrado_2.plot(self.acc_x_cal_test, pen=pen_r, name="ax cal")
+            self.AcelerometroNoCalibrado_2.plot(self.acc_y_cal_test, pen=pen_g, name="ay cal")
+            self.AcelerometroNoCalibrado_2.plot(self.acc_z_cal_test, pen=pen_b, name="az cal")
 
     def Graficar(self):
         self.groupBox.setEnabled(True)
@@ -693,7 +753,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             # --- NO CALIBRADOS ---
             # Giroscopio
             self.GiroscopioNoCalibrado.clear()
-            self.GiroscopioNoCalibrado.addLegend(labelTextSize='8pt', offset=(-15, 15))
+            self.GiroscopioNoCalibrado.addLegend(labelTextSize='8pt', offset=(-11, 11))
             self.GiroscopioNoCalibrado.setLabel('left', 'Vel. Angular', units='°/s',)
             self.GiroscopioNoCalibrado.setLabel('bottom', 'Muestras')       
             self.GiroscopioNoCalibrado.plot(self.gyro_x_nocal, pen=pen_r, name="gx")
@@ -735,26 +795,27 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             # --- NO CALIBRADOS ---
             # Magnetómetro
             self.MagnetometroNoCalibrado.clear()
-            self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt')
-            self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_z_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz")
-            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_z_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz")
-            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_y_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy")
+            self.MagnetometroNoCalibrado.addLegend(labelTextSize='8pt', offset=(-11, 11))
+            self.MagnetometroNoCalibrado.setLabel('left', 'Componente Magnética Vertical', units='µT')
+            self.MagnetometroNoCalibrado.setLabel('bottom', 'Componente Magnética Horizontal', units='µT')
+            self.MagnetometroNoCalibrado.plot(self.mag_y_nocal, self.mag_z_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', symbolPen = pen_r,name="myz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_z_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', symbolPen = pen_g, name="mxz")
+            self.MagnetometroNoCalibrado.plot(self.mag_x_nocal, self.mag_y_nocal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', symbolPen = pen_b, name="mxy")
 
             # --- CALIBRADOS ---
             # Magnetómetro Calibrado
             if self.MagYCalibrado and self.MagZCalibrado:
                 self.MagnetometroNoCalibrado_2.clear()
-                self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt')
-                self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', name="myz cal")
-                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_z_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', name="mxz cal")
-                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_y_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', name="mxy cal")
+                self.MagnetometroNoCalibrado_2.addLegend(labelTextSize='8pt', offset=(-11, 11))
+                self.MagnetometroNoCalibrado_2.setLabel('left', 'Componente Magnética Vertical', units='µT')
+                self.MagnetometroNoCalibrado_2.setLabel('bottom', 'Componente Magnética Horizontal', units='µT')
+                self.MagnetometroNoCalibrado_2.plot(self.mag_y_cal, self.mag_z_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='r', symbolPen = pen_r, name="myz cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_z_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='g', symbolPen = pen_g, name="mxz cal")
+                self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_y_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', symbolPen = pen_b, name="mxy cal")
 
 
         if self.RecGirAce and self.RecMag and self.MagYCalibrado and self.MagZCalibrado and self.GirAceCalibrado:
             self.CalcularAngulosEuler()
-
-        self.RecMag = False
-        self.RecGirAce = False
 
     def ConectarPuerto(self):
         self.groupBox_5.setEnabled(True)
@@ -832,6 +893,9 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         if not self.puerto_serial or not self.puerto_serial.is_open:
             print("Puerto serial no disponible.")
             return
+
+        self.RecMag = False
+        self.RecGirAce = False
 
         self.raw = int(self.comboBox_3.currentText())
         # 11 columnas: [index, timer, ax, ay, az, gx, gy, gz, mx, my, mz]
@@ -954,7 +1018,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.pushButton_7.setText(_translate("Form", "Adquirir YZ (X)"))
         self.pushButton_5.setText(_translate("Form", "Magn Y (Z)"))
         self.pushButton_9.setText(_translate("Form", "Magn Z (Y)"))
-        self.pushButton_10.setText(_translate("Form", "Graficar Calibraciones"))
+        self.pushButton_10.setText(_translate("Form", "Calibraciones"))
         self.label_15.setText(_translate("Form", "N. Muestras"))
         self.label_16.setText(_translate("Form", "T. Max (s)"))
         self.label_17.setText(_translate("Form", "Calibrar: "))
