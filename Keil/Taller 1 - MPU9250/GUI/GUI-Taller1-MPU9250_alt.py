@@ -200,7 +200,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
         self.groupBox_5.setGeometry(QtCore.QRect(1070, 150, 420, 465))
         self.groupBox_5.setObjectName("groupBox_5")
         self.plainTextEdit = QtWidgets.QPlainTextEdit(self.groupBox_5)
-        self.plainTextEdit.setGeometry(QtCore.QRect(10, 110, 400, 101))
+        self.plainTextEdit.setGeometry(QtCore.QRect(10, 110, 400, 500))
         self.plainTextEdit.setObjectName("plainTextEdit")
         self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.groupBox_5)
         self.verticalLayoutWidget_2.setGeometry(QtCore.QRect(10, 20, 400, 86))
@@ -533,6 +533,116 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
             self.pushButton_7.setEnabled(True)
 
     def CalcularAngulosEuler(self):
+        self.groupBox_3.setEnabled(True)
+        A = 0.6
+        B = 0.4
+        rad2deg = 180.0 / 3.141592
+        
+        # 1. Usar self.i real en lugar de self.raw para evitar ceros fantasma
+        n_muestras = self.i
+        Roll = numpy.zeros((n_muestras, 4))
+        Pitch = numpy.zeros((n_muestras, 4))
+        Yaw = numpy.zeros((n_muestras, 4))
+
+        for i in range(0, n_muestras):
+            Roll[i][0] = i
+            Pitch[i][0] = i
+            Yaw[i][0] = i
+            
+            # Obtener el dt real de la columna de tiempos (en segundos)
+            dt_real = self.datos[i, 1]
+
+            # 2. Acelerómetro (Ángulo en radianes convertido a grados)
+            Roll_acc = math.atan2(self.acc_y_cal[i], self.acc_z_cal[i]) * rad2deg
+            Pitch_acc = math.atan2(-self.acc_x_cal[i], math.sqrt((self.acc_y_cal[i]*2) + (self.acc_z_cal[i]*2))) * rad2deg
+
+            Roll[i][1] = Roll_acc
+            Pitch[i][1] = Pitch_acc
+
+            if i == 0:
+                # Condición inicial para el primer punto
+                Roll[i][2] = Roll_acc
+                Roll[i][3] = Roll_acc
+                Pitch[i][2] = Pitch_acc
+                Pitch[i][3] = Pitch_acc
+            else:
+                # 3. Giroscopio (SIN multiplicar por rad2deg de más, ya está en grados/s)
+                Roll_gyro = Roll[i-1][3] + (self.gyro_x_cal[i] * dt_real)
+                Pitch_gyro = Pitch[i-1][3] + (self.gyro_y_cal[i] * dt_real)
+
+                Roll[i][2] = Roll_gyro
+                Pitch[i][2] = Pitch_gyro
+
+                # 4. Filtro Complementario Roll y Pitch
+                Roll[i][3] = (A * Roll_gyro) + (B * Roll_acc)
+                Pitch[i][3] = (A * Pitch_gyro) + (B * Pitch_acc)
+
+            # ---------------------------------------------------------
+            # 5. PROTECCIÓN DEL YAW (Solo se ejecuta si hay Magnetómetro)
+            # ---------------------------------------------------------
+            if hasattr(self, 'mag_x_cal') and hasattr(self, 'mag_y_cal') and hasattr(self, 'mag_z_cal'):
+                
+                # Convertir a radianes el Roll y Pitch del Filtro Complementario
+                phi = math.radians(Roll[i][3])
+                theta = math.radians(Pitch[i][3])
+
+                # Extraer datos calibrados del magnetómetro
+                mx = self.mag_x_cal[i]
+                my = self.mag_y_cal[i]
+                mz = self.mag_z_cal[i]
+
+                # Compensación de Inclinación (Tilt Compensation)
+                X_h = mx * math.cos(theta) + my * math.sin(phi) * math.sin(theta) + mz * math.cos(phi) * math.sin(theta)
+                Y_h = my * math.cos(phi) - mz * math.sin(phi)
+
+                # Cálculo de Yaw con Magnetómetro Compensado (Grados)
+                Yaw_mag = math.atan2(Y_h, X_h) * rad2deg
+                Yaw[i][1] = Yaw_mag
+
+                if i == 0:
+                    Yaw[i][2] = Yaw_mag
+                    Yaw[i][3] = Yaw_mag
+                else:
+                    # Yaw Giroscopio (Integración del eje Z)
+                    Yaw_gyro = Yaw[i-1][3] + (self.gyro_z_cal[i] * dt_real)
+                    Yaw[i][2] = Yaw_gyro
+                    
+                    # Filtro Complementario Yaw
+                    Yaw[i][3] = (A * Yaw_gyro) + (B * Yaw_mag)
+
+       # -------------------------------------------------------------------
+        # GRAFICAS NATIVAS EN PYQTGRAPH PARA EL GROUPBOX 3 (ÁNGULOS DE EULER)
+        # -------------------------------------------------------------------
+        pen_b = pg.mkPen(color='b', width=2.0) # Línea azul un poco más gruesa
+
+        # 1. Gráfica exclusiva de ROLL (Filtro Complementario)
+        self.GiroscopioNoCalibrado_4.clear()
+        self.GiroscopioNoCalibrado_4.addLegend(labelTextSize='8pt', offset=(-15, 15))
+        # CORRECCIÓN: Etiqueta manual y límite de escala fijo a +/- 90 grados
+        self.GiroscopioNoCalibrado_4.setLabel('left', 'Ángulo (Grados)') 
+        self.GiroscopioNoCalibrado_4.setYRange(-90, 90) 
+        self.GiroscopioNoCalibrado_4.setLabel('bottom', 'Muestras')
+        self.GiroscopioNoCalibrado_4.plot(Roll[:, 0], Roll[:, 3], pen=pen_b, name="Roll Final (FC)")
+
+        # 2. Gráfica exclusiva de PITCH (Filtro Complementario)
+        self.AcelerometroNoCalibrado_4.clear()
+        self.AcelerometroNoCalibrado_4.addLegend(labelTextSize='8pt', offset=(-15, 15))
+        # CORRECCIÓN: Etiqueta manual y límite de escala fijo a +/- 90 grados
+        self.AcelerometroNoCalibrado_4.setLabel('left', 'Ángulo (Grados)')
+        self.AcelerometroNoCalibrado_4.setYRange(-90, 90)
+        self.AcelerometroNoCalibrado_4.setLabel('bottom', 'Muestras')
+        self.AcelerometroNoCalibrado_4.plot(Pitch[:, 0], Pitch[:, 3], pen=pen_b, name="Pitch Final (FC)")
+
+        # 3. Gráfica exclusiva de YAW (Filtro Complementario) - Protegida
+        if hasattr(self, 'mag_x_cal') and hasattr(self, 'mag_y_cal') and hasattr(self, 'mag_z_cal'):
+            self.MagnetometroNoCalibrado_4.clear()
+            self.MagnetometroNoCalibrado_4.addLegend(labelTextSize='8pt', offset=(-15, 15))
+            # CORRECCIÓN: Etiqueta manual y límite de escala fijo a +/- 180 grados para el giro completo
+            self.MagnetometroNoCalibrado_4.setLabel('left', 'Ángulo (Grados)')
+            self.MagnetometroNoCalibrado_4.setYRange(-180, 180)
+            self.MagnetometroNoCalibrado_4.setLabel('bottom', 'Muestras')
+            self.MagnetometroNoCalibrado_4.plot(Yaw[:, 0], Yaw[:, 3], pen=pen_b, name="Yaw Final (FC)")
+
         A = 0.6
         B = 0.4
         dt = 0.01
@@ -814,7 +924,7 @@ class Ui_Form(object): # Interfaz Gráfica de Usuario
                 self.MagnetometroNoCalibrado_2.plot(self.mag_x_cal, self.mag_y_cal, pen=None, symbol=simbolo, symbolSize=tamaño_puntos, symbolBrush='b', symbolPen = pen_b, name="mxy cal")
 
 
-        if self.RecGirAce and self.RecMag and self.MagYCalibrado and self.MagZCalibrado and self.GirAceCalibrado:
+        if self.RecGirAce and self.GirAceCalibrado:
             self.CalcularAngulosEuler()
 
     def ConectarPuerto(self):
