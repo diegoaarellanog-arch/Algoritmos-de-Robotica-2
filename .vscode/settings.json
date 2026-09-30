@@ -1,5 +1,6 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "idf.customExtraVars": {},
-    "idf.currentSetup": "C:\\esp\\v6.1-beta1\\esp-idf"
+    "idf.currentSetup": "C:\\esp\\v6.1-beta1\\esp-idf",
+    "cmake.sourceDirectory": "C:/Users/Lenovo/OneDrive/Documentos/Universidad/Algoritmos de Robotica 2/Algoritmos de Robotica 2/URDF"
 }
